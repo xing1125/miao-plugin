@@ -2,7 +2,8 @@
 
 {{block 'css'}}
 <link rel="stylesheet" type="text/css" href="{{_res_path}}/help/index.css"/>
-<% style = style.replace(/{{_res_path}}/g, _res_path) %>
+<% style = (style||'').replace(/{{_res_path}}/g, _res_path);
+   (helpGroup||[]).forEach(function(g){ (g.list||[]).forEach(function(h){ if(h && h.css) h.css = h.css.replace(/{{_res_path}}/g, _res_path); }); }); %>
 {{@style}}
 {{/block}}
 
