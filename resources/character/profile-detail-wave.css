@@ -606,39 +606,42 @@ body, .container { width: 600px; padding: 0; margin: 0; }
    有效项：金缘 + 微金底 + 内发光，数值维持绿色，作为视觉主角。
    无效项：整体压哑（降透明度 + 去金去绿），但仍保持可读，避免词条区显得"破洞"。 */
 .wv-affix:not(.wv-off) {
-  /* 金态底 = 小卡实底 + 金色受光渐变（顶部金、底部暗，仍是凸面受光逻辑） */
+  /* 有效态 = 镀金 + 抬起：金比分更重、内金晕更强、外圈透一点金光 */
   background-color: var(--wv-tile-bg);
-  background-image: var(--wv-noise), linear-gradient(180deg, rgba(233, 207, 142, .16), rgba(233, 207, 142, .03) 45%, rgba(2, 6, 16, .14));
+  background-image: var(--wv-noise), linear-gradient(180deg, rgba(233, 207, 142, .20), rgba(233, 207, 142, .04) 45%, rgba(2, 6, 16, .14));
   background-size: 160px 160px, 100% 100%;
-  border-color: rgba(233, 207, 142, .40);
+  border-color: rgba(233, 207, 142, .55);
   /* 本规则(2 class)会盖掉 L3 的基础落影，必须把立体三件套一起带下来：
      金色内晕 + 内上高光 + 内下暗边 + 外落影 + 磨砂内漫射 */
   box-shadow:
-    inset 0 0 14px rgba(233, 207, 142, .12),
+    inset 0 0 15px rgba(233, 207, 142, .16),
     inset 0 0 22px -10px rgba(140, 178, 230, .13),
-    inset 0 1px 0 rgba(255, 255, 255, .20),
-    inset 0 -1px 0 rgba(3, 8, 18, .42),
+    inset 0 1px 0 rgba(255, 255, 255, .22),
+    inset 0 -1px 0 rgba(3, 8, 18, .44),
     0 3px 9px -3px rgba(0, 0, 0, .58),
     0 1px 2px -1px rgba(0, 0, 0, .40),
-    0 0 10px rgba(233, 207, 142, .05);
+    0 0 11px rgba(233, 207, 142, .10);
 }
 .wv-affix:not(.wv-off) .wv-k { color: var(--wv-t2); }
 
-/* 无效项：整体压哑（去金去绿 + 适度压暗），但仍必须可读。
-   ⚠ 压暗手段不能用 opacity —— 像素级实测 opacity .45~.55 时对比度只有 1.2~1.7（❌）。
-   现在统一用「灰蓝 t6 + opacity .78~.86」，实测 3.2~3.5:1；"无效"的观感由
-   词条格自身不给金框金底来承担，而不是把字压到看不清。 */
+/* 无效项：语义是「沉下去」，不是「看不清」。
+   ⚠ 关键：无效态过去会**继承 L3 那套玻璃三件套**（白棱边 + 顶部透光 + 外落影），
+   所以它看着和有效态一样"亮、浮"，层级自然拉不开 —— 这里显式覆盖掉：
+   去白棱边、去外落影、去玻璃，改成一圈内阴影（读起来是凹的暗格）。
+   文字只降到 t7（实测对暗底仍 >5:1），"无效"靠面处理承担。 */
 .wv-affix.wv-off {
-  /* 无效态也垫实底（比有效态暗半档），但保持磨砂与立体——"无效"的语义由
-     去金框 + 冷灰细标 + 字色压灰承担，而不是把卡身做虚 */
-  background-color: rgba(14, 25, 45, .95);
-  background-image: var(--wv-noise), linear-gradient(180deg, rgba(255, 255, 255, .022), rgba(255, 255, 255, .008) 45%, rgba(2, 6, 16, .12));
-  background-size: 160px 160px, 100% 100%;
-  border-color: rgba(140, 178, 230, .07);
+  background-color: rgba(9, 16, 30, .94);
+  background-image: none;
+  border-color: rgba(140, 178, 230, .05);
+  box-shadow:
+    inset 0 1px 0 rgba(3, 8, 18, .55),
+    inset 0 0 12px -2px rgba(0, 0, 0, .55);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
-.wv-affix.wv-off .wv-n { color: var(--wv-t6); opacity: .80; }
-.wv-affix.wv-off .wv-k { color: var(--wv-t6); opacity: .86; }
-.wv-affix.wv-off .wv-v { color: var(--wv-t6); opacity: .82; }
+.wv-affix.wv-off .wv-n { color: var(--wv-t7); opacity: .95; }
+.wv-affix.wv-off .wv-k { color: var(--wv-t7); opacity: .95; }
+.wv-affix.wv-off .wv-v { color: var(--wv-t7); opacity: .95; }
 
 /* charWeight 缺失（权重表查不到该角色）时不做有效性判定：
    退回中性样式 —— 既不镀金也不压暗，避免把全部词条误标成「有效」。
@@ -760,8 +763,19 @@ body, .container { width: 600px; padding: 0; margin: 0; }
 /* 有效 / 无效：老版 great/nouse 同款处理 —— 亮箭头 icon2 vs 暗箭头 icon0，
    无效行整行压到 t6（仍 ≥3:1 可读，不是"看不清"） */
 .wv-relic-list li.wv-on .wv-up { background-image: url(./imgs/up-num-icon2.png); }
-.wv-relic-list li.wv-off .wv-k, .wv-relic-list li.wv-off .wv-v { color: var(--wv-t6); }
-.wv-relic-list li.wv-off .wv-eq { color: var(--wv-t6); }
+/* 有效行：左缘一道金刻度（沿用全卡的「左竖条」语言），与无效行的平哑暗格一眼分开 */
+.wv-relic-list li.wv-on::before {
+  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px; pointer-events: none;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(180deg, rgba(233, 207, 142, .9), rgba(233, 207, 142, .22));
+}
+/* 无效行：压成平哑暗格（不再参与格子交替），文字降一档到 t7。
+   层级靠「面」（有效=亮格+金刻度 / 无效=暗格+无标记）承担，而不是把字压到看不清 */
+.wv-relic-list li.wv-off,
+.wv-relic-list li.wv-off:nth-child(even),
+.wv-relic-list li.wv-off:nth-child(odd) { background: rgba(4, 12, 24, .46); }
+.wv-relic-list li.wv-off .wv-k, .wv-relic-list li.wv-off .wv-v { color: var(--wv-t7); }
+.wv-relic-list li.wv-off .wv-eq { color: var(--wv-t7); border-color: rgba(140, 178, 230, .14); }
 .wv-relic-list li.wv-off .wv-up { background-image: url(./imgs/up-num-icon0.png); }
 .wv-relic-div { position: relative; height: 1px; margin: 1px 0; background: linear-gradient(90deg, rgba(140, 178, 230, .06), rgba(140, 178, 230, .28), rgba(140, 178, 230, .06)); }
 /* 分隔线点缀：中央金菱形（对齐 HUD 分段条的菱形语言）+ 两侧 3px 刻点 */
@@ -780,7 +794,7 @@ body, .container { width: 600px; padding: 0; margin: 0; }
   background-position: calc(50% - 10px) 0, calc(50% + 7px) 0;
   background-repeat: no-repeat;
 }
-/* 单件圣遗物副词条按有效/无效区分：无效行整行压到 t6（不是压到看不清）。
+/* 单件圣遗物副词条按有效/无效区分：无效行压成平哑暗格 + 文字降 t7（不是压到看不清）。
    第 30 轮起随「格子 + 线」重做，规则统一在上面词条区那一块，这里不再重复定义。 */
 
 /* 通用评分胶囊
