@@ -846,8 +846,8 @@ body, .container { width: 600px; padding: 0; margin: 0; }
     inset 0 -1px 0 rgba(3, 8, 18, .42),
     inset 0 0 22px -10px rgba(140, 178, 230, .13),
     0 0 14px rgba(255, 77, 79, .16),
-    0 3px 9px -3px rgba(0, 0, 0, .58),
-    0 1px 2px -1px rgba(0, 0, 0, .40);
+    0 5px 14px -4px rgba(0, 0, 0, .68),
+    0 2px 4px -1px rgba(0, 0, 0, .46);
 }
 .wv-relic.wv-grade-ACE, .wv-rscore.wv-grade-ACE {
   border-color: rgba(255, 59, 48, .16);
@@ -855,8 +855,8 @@ body, .container { width: 600px; padding: 0; margin: 0; }
     inset 0 1px 0 rgba(255, 59, 48, .16),
     inset 0 -1px 0 rgba(3, 8, 18, .42),
     inset 0 0 22px -10px rgba(140, 178, 230, .13),
-    0 3px 9px -3px rgba(0, 0, 0, .58),
-    0 1px 2px -1px rgba(0, 0, 0, .40);
+    0 5px 14px -4px rgba(0, 0, 0, .68),
+    0 2px 4px -1px rgba(0, 0, 0, .46);
 }
 .wv-relic.wv-grade-MAX::after, .wv-rscore.wv-grade-MAX::after { box-shadow: 0 0 9px rgba(255, 77, 79, .95); }
 .wv-relic.wv-grade-ACE::after, .wv-rscore.wv-grade-ACE::after { box-shadow: 0 0 5px rgba(255, 59, 48, .5); }
@@ -958,16 +958,17 @@ body, .container { width: 600px; padding: 0; margin: 0; }
     inset 1px 0 0 rgba(255, 255, 255, .035),
     inset -1px 0 0 rgba(3, 8, 18, .26),
     inset 0 0 30px -12px rgba(140, 178, 230, .13),
-    0 9px 22px -10px rgba(0, 0, 0, .70),
-    0 2px 4px -1px rgba(0, 0, 0, .40);
+    0 13px 30px -14px rgba(0, 0, 0, .82),
+    0 6px 14px -7px rgba(0, 0, 0, .55),
+    0 2px 4px -1px rgba(0, 0, 0, .45);
 }
 .wv-panel, .wv-talent-panel, .wv-rating, .wv-hdr {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, .17),
     inset 0 -1px 0 rgba(3, 8, 18, .38),
     inset 0 0 26px -12px rgba(140, 178, 230, .11),
-    0 4px 13px -6px rgba(0, 0, 0, .58),
-    0 1px 3px -1px rgba(0, 0, 0, .34);
+    0 7px 19px -9px rgba(0, 0, 0, .70),
+    0 2px 6px -2px rgba(0, 0, 0, .44);
 }
 /* .wv-rscore 与 .wv-relic 是同尺寸的"小卡"，必须同档，否则并排看会一大一小地飘。
    2026-10-15 加重：用户反馈"不够立体"。L3 原来只有 0 2px 6px -3px 一层轻落影，
@@ -978,8 +979,8 @@ body, .container { width: 600px; padding: 0; margin: 0; }
     inset 0 1px 0 rgba(255, 255, 255, .20),
     inset 0 -1px 0 rgba(3, 8, 18, .42),
     inset 0 0 22px -10px rgba(140, 178, 230, .13),
-    0 3px 9px -3px rgba(0, 0, 0, .58),
-    0 1px 2px -1px rgba(0, 0, 0, .40);
+    0 5px 14px -4px rgba(0, 0, 0, .68),
+    0 2px 4px -1px rgba(0, 0, 0, .46);
   /* 玻璃：把透上来的主题六边形底纹虚化，否则它是"清晰的图案"而不是磨砂 */
   backdrop-filter: blur(3px) saturate(1.05);
   -webkit-backdrop-filter: blur(3px) saturate(1.05);
@@ -1386,3 +1387,45 @@ body, .container { width: 600px; padding: 0; margin: 0; }
   background: linear-gradient(180deg, #F0D79A, #B8912B);
   box-shadow: 4px 0 0 -1px rgba(233, 207, 142, .45), 0 0 7px rgba(233, 207, 142, .55);
 }
+
+/* ================= 第 37 轮：装饰与层次补强（用户反馈"显得空 / 立体感不强"） ================= */
+
+/* 1) 面板四角 HUD 括号：原 alpha 只有 .38~.55，在深蓝底上几乎看不见 —— 整体提亮，让"框感"出来 */
+.wv-sect::after, .wv-panel::after, .wv-talent-panel::after, .wv-rating::after, .wv-notes::after {
+  filter: brightness(1.5) saturate(1.15);
+}
+/* 2) 分区编号 → HUD 角标（金底细边小胶囊），标题一眼有"编号牌"的装饰感 */
+.wv-sec-head .wv-no {
+  padding: 2px 6px; border-radius: 4px; color: var(--wv-gold-b);
+  background: linear-gradient(180deg, rgba(233, 207, 142, .22), rgba(233, 207, 142, .04));
+  border: 1px solid rgba(233, 207, 142, .40);
+  box-shadow: 0 0 8px -2px rgba(233, 207, 142, .45), inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+/* 3) 分隔菱段的端部圆点同样提亮（原 .5 → .78），否则装饰等于没有 */
+.wv-hr-orn::before, .wv-hr-orn::after { background: rgba(233, 207, 142, .78); }
+/* 4) 分区标题右侧英文尾标（DMG/RELIE 等）加细边描个框，收口更"仪表盘" */
+.wv-sec-head .wv-en {
+  padding: 1px 5px; border-radius: 3px; border: 1px solid rgba(140, 178, 230, .22);
+  background: rgba(9, 18, 34, .45);
+}
+/* 5) 伤害计算来源 / 口径标注（移植老版 .data-info，并接上 miao 的 dmgMsg 口径行） */
+.wv-dmg-src {
+  position: relative; margin-top: 8px; padding: 7px 10px 7px 15px;
+  border-radius: 8px; border: 1px solid rgba(140, 178, 230, .18);
+  background-color: rgba(9, 18, 34, .55);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(2, 6, 16, .10));
+  display: flex; flex-direction: column; gap: 5px;
+}
+/* 左缘金导轨 + 上下端刻点（沿用全卡"左竖条"语言，兼顾装饰与信息分组） */
+.wv-dmg-src::before {
+  content: ''; position: absolute; left: 5px; top: 9px; bottom: 9px; width: 2px; border-radius: 2px;
+  background: linear-gradient(180deg, rgba(233, 207, 142, .78), rgba(233, 207, 142, .18));
+}
+.wv-dmg-src::after {
+  content: ''; position: absolute; left: 4px; top: 6px; width: 4px; height: 4px; border-radius: 50%;
+  background: rgba(233, 207, 142, .8); box-shadow: 0 0 6px rgba(233, 207, 142, .6);
+}
+.wv-src-cap { font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; color: var(--wv-gold-b); }
+.wv-src-list { display: flex; flex-wrap: wrap; gap: 3px 12px; }
+.wv-src-i { font-size: 11px; line-height: 1.55; color: var(--wv-t5); }
+.wv-src-i b { font-weight: 700; color: var(--wv-t2); margin-left: 4px; }

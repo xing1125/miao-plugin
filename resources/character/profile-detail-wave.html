@@ -332,6 +332,20 @@
       <div class="wv-tr wv-total"><span class="wv-c0">总计</span><span class="wv-c1">{{card.dmgTotal.dmg}}</span><span class="wv-c2">{{card.dmgTotal.avg}}</span></div>
       {{/if}}
     </div>
+
+    {{if (dmgCalc.dmgMsg && dmgCalc.dmgMsg.length > 0) || data.dataSource || data.updateTime}}
+    <!-- 伤害计算来源 / 口径：老版 .data-info（数据源+更新时间）+ miao 自己的 dmgMsg 口径说明 -->
+    <div class="wv-dmg-src">
+      <span class="wv-src-cap">伤害计算来源</span>
+      <div class="wv-src-list">
+        {{each dmgCalc.dmgMsg m}}
+        <span class="wv-src-i">{{m[0]}}{{if m[1]}}<b>{{m[1]}}</b>{{/if}}</span>
+        {{/each}}
+        {{if data.dataSource}}<span class="wv-src-i">数据源<b>{{ {change: '面板变换', mys: '米游社', miao: '喵喵'}[data.dataSource] || data.dataSource }}</b></span>{{/if}}
+        {{if data.updateTime}}<span class="wv-src-i">更新时间<b>{{data.updateTime}}</b></span>{{/if}}
+      </div>
+    </div>
+    {{/if}}
   </div>
   {{/if}}
 
