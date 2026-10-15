@@ -76,7 +76,7 @@
       {{/if}}
       <div class="info">
         {{if li.type === "character" && game === 'gs'}}
-        <img src="{{_res_path}}{{li.face}}" class="character-img"/>
+        <img src="{{_res_path}}{{li.face}}" class="character-img" onerror="this.style.display='none'"/>
         {{else if li.icon}}
         <img src="{{li.icon}}" class="cal-icon"/>
         {{else}}

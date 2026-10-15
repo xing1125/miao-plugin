@@ -10,7 +10,8 @@
   <link rel="stylesheet" type="text/css" href="{{_miao_path}}common/common.css"/>
   <title>miao-plugin</title>
   {{block 'css'}}
-  {{/block}}
+    {{/block}}
+    <link rel="stylesheet" type="text/css" href="{{_res_path}}/character/blue-glass-theme.css"/>
 </head>
 {{set elemCls = {火:'pyro',冰:'cryo',风:'anemo',雷:'electro',量子:'quantum',虚数:'geo',物理:'sr', }[element||elem] || element || elem || 'hydro' }}
 <body class="elem-{{elemCls}} {{displayMode || mode || `default`}}-mode {{bodyClass}}" {{sys.scale}}>

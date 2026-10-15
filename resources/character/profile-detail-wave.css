@@ -1,0 +1,1374 @@
+/* ==========================================================================
+   角色面板 · 卡片分区版（profile-detail-wave）
+   --------------------------------------------------------------------------
+   布局/排版/结构移植自参考卡（玛薇卡 · 鸣潮风格深蓝科幻卡），
+   数据全部来自 miao-plugin 现有 profile 数据（artisDetail / attr / dmgCalc）。
+   配色与 miao 的 blue-glass-theme 共用一套 CSS 变量名，主题改了这里跟着变。
+   停用：把 profile-detail.html 的 {{extend}} 换回原模板即可（本文件独立，不影响原面板）。
+   ========================================================================== */
+
+:root {
+  /* 配色统一吃 blue-glass-theme.css 的变量（第二个参数是主题未加载时的兜底），
+     这样主题一改色，这张卡片跟着变，不会再出现两套金/两套蓝 */
+  --wv-panel: var(--bg-panel, rgba(28, 54, 96, .66));
+  --wv-panel-line: rgba(120, 200, 255, .24);
+  /* 头部信息条底色：比其它面板更实 —— 页眉承载 UID/元素等小字，必须保证对比度。
+     .94/.92：主题底图是浅蓝图且下半卡会变亮（见下方「不透明暗底」说明），86% 不够。
+     第 27 轮提亮：深蓝灰 → 更高明度、更饱和的蓝，整体「鲜亮」不再发灰 */
+  --wv-chip-bg: linear-gradient(180deg, rgba(30, 54, 94, .94), rgba(16, 32, 60, .92));
+  --wv-chip-line: var(--bd-ice, rgba(120, 200, 255, .30));
+
+  --wv-gold: var(--c-gold, #FFD98A);
+  --wv-gold-b: #FFE6A8;
+  --wv-green: var(--c-plus, #7DF5AE);
+  --wv-blue: var(--c-hi, #6FE5FF);
+  --wv-purple: #C79BFF;
+  --wv-red: #FF6E5A;
+
+  --wv-t1: var(--c-base, #FBFDFF);
+  --wv-t2: #EAF3FD;
+  --wv-t3: #D8E4F2;
+  --wv-t4: var(--c-sub, #BFD2E6);
+  --wv-t5: #A6BAD2;
+  /* t7/t8 原为 #6E8098 / #5A6B80。像素级对比度实测：面板有效底色 ~0.035 时，
+     #6E8098 只有 2.98:1、#5A6B80 只有 2.26:1 —— 连"最低可读"的 3.0 都不到。
+     这里各提亮约一档（色相不变，仍是灰蓝），压暗层级关系保持 t5 > t6 > t7 > t8。
+     第 27 轮：面板底色已提亮到 ~0.09，灰阶层整体再提一档以匹配更亮的卡面 */
+  --wv-t6: #9DB2CB;
+  --wv-t7: #8AA0B8;
+  --wv-t8: #7E92AA;
+
+  /* 元素签名色：由模板以 --wv-elem 注入（角色元素），未注入时兜底灰蓝 */
+  --wv-elem: #9FB2C8;
+
+  /* 磨砂颗粒：SVG feTurbulence 灰噪点（无外部资源，渲染确定性 100%）。
+     rect opacity .08 = 8% 叠加，在深底上是"细砂纸"质感；作为最上层 background-image
+     平铺 160×160。只给圣遗物/词条/评分三类小卡用（用户要求磨砂感），大面板保持干净。 */
+  --wv-noise: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='160'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='160'%20height='160'%20filter='url(%23n)'%20opacity='0.07'/%3E%3C/svg%3E");
+  /* 小卡自己的不透明深底。比 .wv-sect 的 rgba(30,56,100,.90) 略浅半档，
+     小卡坐在分区面板上时能读出"贴片有自己的身体"，而不是和面板融成一片（背景太虚）。
+     第 27 轮提亮：深蓝灰 → 更亮更饱和的蓝 */
+  --wv-tile-bg: rgba(32, 60, 104, .93);
+}
+
+body, .container { width: 600px; padding: 0; margin: 0; }
+
+/* ---------- 根容器 ---------- */
+.wv {
+  position: relative;
+  box-sizing: border-box;
+  width: 600px;
+  padding: 10px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  /* 自备深底。.wv 原本一点 background 都没有，卡片的深色完全依赖主题给 .profile-cont 的
+     `background-color:#060c18 !important` + 底图。那条规则一旦没命中（主题未加载 / 旧缓存页 /
+     class 被改掉），卡片就直接坐在浅色布局底图上，所有小字当场糊掉 —— 用户反馈的"看不清"
+     就是这副样子（截图里是浅蓝灰底 + 六边形纹）。
+     这里补一层不透明深底当兜底：主题生效时它的 !important 优先级更高，本行完全不参与渲染，
+     所以对现有观感零影响；主题失效时则保证文字对比度仍然成立。 */
+  background-color: #070d1a;
+  /* 最终版外框（用户反馈"外边框太虚"）：1.5px 冰蓝实边 + 外缘硬压边 + 冰蓝外发光 + 落影，
+     让卡片边缘在浅色聊天背景上也"压得住"。border-box 下内容区只缩 2px，由 padding 吸收 */
+  border: 1.5px solid rgba(140, 178, 230, .30);
+  border-radius: 7px;
+  /* 边缘暗角：inset 阴影画在自身背景之上、子元素之下，所以它只压暗"卡底图"、
+     不会弄脏面板内容。底图边缘一暗，坐在上面的分区就有了"浮起来"的对比基准 —— 
+     这是整张卡最省事、也最有效的一层立体感。 */
+  box-shadow:
+    inset 0 0 74px -16px rgba(2, 6, 16, .60),
+    inset 0 1px 0 rgba(255, 255, 255, .045),
+    0 0 0 1.5px rgba(5, 10, 20, .85),
+    0 0 22px -6px rgba(92, 196, 255, .28),
+    0 12px 34px -14px rgba(0, 0, 0, .70);
+}
+.wv > *:not(.wv-glow-warm):not(.wv-glow-cool):not(.wv-glow-elem):not(.wv-rune) { position: relative; z-index: 1; }
+.wv-glow-warm, .wv-glow-cool, .wv-glow-elem { position: absolute; pointer-events: none; border-radius: 50%; z-index: 0; }
+
+/* 六边形符文暗纹：单开一层，方便单独压透明度（直接复用主题的 --rune）
+   0.22 是实测定值 —— 再高会在圣遗物卡等半透明面板里透出网格线干扰阅读 */
+.wv-rune {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  opacity: .22;
+  background-image: var(--rune, none);
+  background-size: 62px 54px;
+}
+.wv-glow-warm {
+  left: -70px; top: -90px; width: 380px; height: 300px;
+  background: radial-gradient(closest-side, rgba(255, 112, 36, .16), rgba(255, 112, 36, 0));
+}
+.wv-glow-cool {
+  right: -160px; bottom: -120px; width: 460px; height: 320px;
+  background: radial-gradient(closest-side, rgba(71, 140, 255, .14), rgba(71, 140, 255, 0));
+}
+
+/* ---------- 头部信息条 ---------- */
+.wv-hdr {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 14px;
+  background: var(--wv-chip-bg); border: 1px solid var(--wv-chip-line);
+}
+.wv-hdr::before {
+  content: ''; position: absolute; left: 0; top: 11px; bottom: 11px; width: 2px;
+  border-radius: 0 2px 2px 0;
+  /* 第 27 轮：左侧饰条改用角色元素色（由 --wv-elem 注入），呼应「鲜亮」基调；
+     仍保留一截金做收尾，避免和整体金/冰语言完全脱节 */
+  background: linear-gradient(180deg, var(--wv-elem, #E9CF8E), rgba(233, 207, 142, .12));
+}
+.wv-avatar {
+  width: 58px; height: 58px; flex: 0 0 58px; border-radius: 50%;
+  object-fit: cover;
+  box-shadow:
+    0 0 0 1px rgba(233, 207, 142, .55),
+    0 0 0 3px rgba(8, 18, 35, .95),
+    0 0 0 4px rgba(233, 207, 142, .3),
+    0 0 0 7px rgba(140, 178, 230, .12),
+    0 0 18px rgba(233, 207, 142, .22),
+    0 0 16px -2px var(--wv-elem, #9FB2C8);
+}
+.wv-hdr-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.wv-char-name {
+  font-size: 22px; font-weight: 700; color: var(--wv-t1); line-height: 1.2;
+  text-shadow: 0 0 15px rgba(140, 190, 255, .26);
+}
+.wv-hdr-sub { display: flex; align-items: center; gap: 6px; }
+.wv-chip {
+  font-size: 13px; color: #CBD9EA; line-height: 1.4;
+  background: rgba(255, 255, 255, .10); border-radius: 6px; padding: 2px 7px;
+}
+.wv-hdr-sub .wv-dim { font-size: 13px; color: #AFC0D4; }
+.wv-spacer { flex: 1 1 auto; }
+.wv-kv { display: flex; flex-direction: column; gap: 2px; }
+.wv-kv .wv-k { font-size: 12.5px; color: #9FB2C8; line-height: 1.3; }
+.wv-kv .wv-v { font-size: 19px; font-weight: 700; color: var(--wv-gold); line-height: 1.1; }
+.wv-divider { width: 1px; height: 28px; background: rgba(255, 255, 255, .13); }
+.wv-badge {
+  position: relative; z-index: 0; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 11px;
+  overflow: hidden; /* 让游戏 logo 图被圆角裁切 */
+  background: rgba(8, 16, 30, .62);
+  border: 1px solid rgba(140, 178, 230, .34);
+  box-shadow: inset 0 0 12px rgba(92, 196, 255, .14), 0 0 10px -2px rgba(92, 196, 255, .22);
+}
+/* 游戏 logo：原神=派蒙、星铁=官方角色头像（common/cont/game-*.webp），铺满徽章 */
+.wv-game-logo { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* 元素符号 icon 芯片：内联 SVG 以 currentColor=元素签名色渲染，外发光用元素色，
+   让头部信息条一眼带出「这个角色是什么元素」的鲜亮基调（替换原文字元素 chip） */
+.wv-elem-ic {
+  flex: 0 0 22px; width: 22px; height: 22px; display: block;
+  filter: drop-shadow(0 0 5px var(--wv-elem, #9FB2C8));
+}
+.wv-elem-ic svg { display: block; width: 100%; height: 100%; }
+/* 元素 / 武器类型的中文描述：与图标并排，字色用正文亮色，不加底（避免头部太花） */
+.wv-tag { font-size: 12.5px; line-height: 22px; color: var(--wv-t2); letter-spacing: .3px; white-space: nowrap; }
+/* 等级图标：金色上行箭头 */
+.wv-lv-ic { width: 13px; height: 13px; display: block; flex: 0 0 13px; }
+.wv-kv .wv-k { display: flex; align-items: center; gap: 4px; }
+/* 武器类型图标（原神 atk-{type}.webp，白色线稿，原本配深色圆底）：
+   本卡片头部本身就是深蓝，直接用原色 + 一圈柔光让白线稿在深底上立住 */
+.wv-wpn-ic { flex: 0 0 22px; width: 22px; height: 22px; display: block; }
+.wv-wpn-ic img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 4px rgba(160, 205, 255, .55)); }
+/* 元素色顶光：坐在卡左上，给整张卡注入一抹该角色的元素色（透明度压低，不抢结构） */
+.wv-glow-elem {
+  left: -130px; top: -160px; width: 440px; height: 380px;
+  background: radial-gradient(closest-side, var(--wv-elem, #9FB2C8), rgba(0, 0, 0, 0));
+  opacity: .20;
+}
+
+/* ---------- 命座轨迹 + 天赋 ---------- */
+.wv-talent-panel {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 9px 12px 10px; border-radius: 12px;
+  background: var(--wv-panel); border: 1px solid var(--wv-panel-line);
+}
+.wv-cons-strip { position: relative; display: flex; align-items: center; gap: 8px; }
+/* 星魂条两端竖刻度（与 relic-div/hud 的金饰语言一致） */
+.wv-cons-strip::before, .wv-cons-strip::after {
+  content: ''; position: absolute; top: 50%; width: 2px; height: 70%; transform: translateY(-50%);
+  pointer-events: none;
+}
+.wv-cons-strip::before { left: -4px; background: linear-gradient(180deg, rgba(233, 207, 142, .55), rgba(233, 207, 142, .06)); }
+.wv-cons-strip::after { right: -4px; background: linear-gradient(180deg, rgba(140, 178, 230, .08), rgba(140, 178, 230, .45)); }
+.wv-cons-k { font-size: 11.5px; color: var(--wv-t3); letter-spacing: .5px; white-space: nowrap; }
+.wv-cons-lv {
+  font-size: 11px; font-weight: 700; color: var(--wv-gold); white-space: nowrap;
+  background: rgba(233, 207, 142, .12); border: 1px solid rgba(233, 207, 142, .4);
+  border-radius: 5px; padding: 0 6px; line-height: 17px;
+}
+.wv-cons-nodes { margin-left: auto; flex: 0 1 auto; display: flex; align-items: center; }
+/* 命座节点：直接显示上游的真实命座图标（未点亮做灰度压暗处理） */
+.wv-cn {
+  width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .13);
+}
+.wv-cn img {
+  display: block; width: 100%; height: 100%; object-fit: cover;
+  filter: grayscale(1) brightness(.52);
+}
+.wv-cn svg { display: block; width: 14px; height: 14px; }
+.wv-cn svg path { fill: #5A6980; }
+.wv-cn.on {
+  background: linear-gradient(180deg, #3B2F55, #191223);
+  border-color: rgba(240, 215, 154, .80);
+  box-shadow: 0 0 10px rgba(233, 207, 142, .5), inset 0 0 5px rgba(233, 207, 142, .22);
+}
+.wv-cn.on img { filter: none; }
+.wv-cn.on svg path { fill: #F0D79A; }
+.wv-cl { flex: 0 0 30px; height: 1px; background: rgba(140, 178, 230, .3); }
+.wv-cl.on {
+  background: linear-gradient(90deg, rgba(240, 215, 154, .85), rgba(240, 215, 154, .45));
+  box-shadow: 0 0 5px rgba(233, 207, 142, .45);
+}
+.wv-talent-row { display: flex; align-items: center; padding-top: 3px; }
+.wv-tunit {
+  box-sizing: border-box; flex: 1 1 0; min-width: 0;
+  display: flex; align-items: center; gap: 9px; padding: 0 11px;
+}
+.wv-tunit:first-child { padding-left: 0; }
+.wv-tunit:last-child { padding-right: 0; }
+.wv-tunit + .wv-tunit { border-left: 1px solid rgba(255, 255, 255, .075); }
+.wv-ticon-wrap { position: relative; padding: 0 5px 5px 0; flex: 0 0 auto; }
+.wv-ticon {
+  width: 48px; height: 48px; border-radius: 12px;
+  /* 两层：第 1 层天赋图标（缩放 38px），第 2 层底色渐变（铺满） */
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, center;
+  background-size: 38px 38px, auto;
+}
+.wv-tbadge {
+  position: absolute; right: 0; bottom: 0;
+  font-size: 12px; font-weight: 800; line-height: 17px;
+  padding: 0 5px; border-radius: 5px; white-space: nowrap;
+  background: rgba(5, 13, 26, .78);
+}
+.wv-tmeta { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.wv-tname {
+  font-size: 11.5px; color: var(--wv-t3); letter-spacing: .3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wv-tbar { width: 100%; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.wv-tbar i { display: block; height: 100%; border-radius: 2px; }
+
+/* 6 天赋密集态（星铁记忆/欢愉命途多出 忆灵技/忆灵天赋）：图标与间距收一档，防名字裁切。
+   只在 talents.length > 4 时由模板挂 wv-dense，原神 3 天赋与星铁常规 4 天赋不受影响 */
+.wv-talent-row.wv-dense .wv-tunit { gap: 5px; padding: 0 6px; }
+.wv-talent-row.wv-dense .wv-ticon { width: 36px; height: 36px; border-radius: 9px; background-size: 28px 28px, auto; }
+.wv-talent-row.wv-dense .wv-tbadge { font-size: 11px; line-height: 14px; padding: 0 4px; border-radius: 4px; }
+.wv-talent-row.wv-dense .wv-tmeta { gap: 4px; }
+.wv-talent-row.wv-dense .wv-tname { font-size: 11px; letter-spacing: 0; }
+
+/* 星铁行迹条：10 属性点 + 3 大行迹交替。点亮 = 金色微光；未点亮 = 压灰缩小，
+   "点了多少行迹"一眼可数。图标全部走 background-image，不新增 DOM 结构 */
+.wv-trace-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 4px; padding-top: 8px; margin-top: 1px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+}
+.wv-trace-g { display: flex; gap: 3px; }
+.wv-trace {
+  width: 16px; height: 16px; border-radius: 4px;
+  background-color: rgba(255, 255, 255, .05);
+  background-repeat: no-repeat; background-position: center; background-size: 12px 12px;
+  opacity: .35; filter: grayscale(.7);
+}
+.wv-trace.on {
+  opacity: 1; filter: none;
+  background-color: rgba(233, 207, 142, .13);
+  box-shadow: 0 0 6px rgba(233, 207, 142, .22), inset 0 0 0 1px rgba(233, 207, 142, .28);
+}
+.wv-trace-g.wv-major .wv-trace { width: 20px; height: 20px; border-radius: 5px; background-size: 16px 16px; }
+/* 行迹条两端金色小点 */
+.wv-trace-row::before, .wv-trace-row::after {
+  content: ''; position: absolute; top: 50%; width: 4px; height: 4px; margin-top: -2px;
+  transform: rotate(45deg); pointer-events: none;
+  background: rgba(240, 215, 154, .55);
+}
+.wv-trace-row::before { left: -1px; }
+.wv-trace-row::after { right: -1px; }
+
+/* ---------- 主体区 ---------- */
+.wv-main { display: flex; gap: 12px; align-items: stretch; }
+.wv-col-l { width: 232px; flex: 0 0 232px; display: flex; flex-direction: column; gap: 10px; }
+.wv-col-r { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.wv-art-card {
+  position: relative; width: 232px; height: auto; flex: 1 1 auto; min-height: 300px;
+  border-radius: 12px; overflow: hidden;
+  border: 1px solid rgba(233, 207, 142, .38);
+  background: rgba(5, 13, 26, .5);
+  /* 立绘是整卡的视觉锚点：外落影 + 内暗角，让它明显浮在卡底图之上
+     （overflow:hidden 使内暗角沿圆角裁切；::after 的金角画在阴影之上，不受影响） */
+  box-shadow:
+    inset 0 0 46px -12px rgba(2, 6, 16, .58),
+    0 8px 22px -12px rgba(0, 0, 0, .78),
+    0 2px 5px -2px rgba(0, 0, 0, .45);
+}
+.wv-art-card img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 8%; }
+.wv-nameplate {
+  position: absolute; left: 12px; bottom: 16px;
+  font-size: 13.5px; font-weight: 700; color: #FFFFFF; line-height: 1.4;
+  background: rgba(5, 13, 26, .62); border-radius: 8px; padding: 4px 9px;
+}
+
+/* ---------- 角色练度评级 ---------- */
+.wv-rating {
+  display: flex; align-items: center; gap: 12px; padding: 12px;
+  border-radius: 12px; background: var(--wv-panel); border: 1px solid var(--wv-panel-line);
+}
+.wv-rating-ring { position: relative; width: 76px; height: 76px; flex: 0 0 76px; }
+.wv-rating-ring::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg,
+    rgba(233, 207, 142, .34) 0deg 1.3deg, rgba(233, 207, 142, 0) 1.3deg 15deg);
+  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0 34.5px, #000 34.5px 36.5px, transparent 36.5px);
+          mask: radial-gradient(circle at 50% 50%, transparent 0 34.5px, #000 34.5px 36.5px, transparent 36.5px);
+}
+.wv-rating-ring svg {
+  display: block; width: 100%; height: 100%;
+  filter: drop-shadow(0 0 6px rgba(160, 120, 240, .50))
+          drop-shadow(0 0 16px rgba(233, 207, 142, .16));
+}
+.wv-rating-ring .wv-grade {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; color: #E4D4FF; letter-spacing: .5px;
+  text-shadow: 0 0 8px rgba(170, 130, 250, .55), 0 1px 1px rgba(5, 13, 26, .85);
+}
+.wv-rating-num { position: relative; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+/* 评分数区底部饰线：渐隐双线（::after）+ 中央金菱形（::before，rotate45，对齐圣遗物分隔线语言） */
+.wv-rating-num::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 1px; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(233, 207, 142, .45), rgba(233, 207, 142, 0) 38%) left center / 42% 1px no-repeat,
+    linear-gradient(270deg, rgba(233, 207, 142, .45), rgba(233, 207, 142, 0) 38%) right center / 42% 1px no-repeat;
+}
+.wv-rating-num::before {
+  content: ''; position: absolute; left: 50%; bottom: -6px; width: 5px; height: 5px;
+  margin-left: -2.5px; transform: rotate(45deg); pointer-events: none;
+  background: linear-gradient(135deg, rgba(240, 215, 154, .9), rgba(185, 145, 43, .5));
+  box-shadow: 0 0 5px rgba(233, 207, 142, .30);
+}
+.wv-rating-num .wv-n {
+  font-size: 34px; font-weight: 900; line-height: 1.02;
+  background: linear-gradient(180deg, #FFF1C4 0%, #FFD98A 52%, #E9C36A 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 9px rgba(233, 207, 142, .28));
+}
+.wv-rating-num .wv-l { font-size: 11.5px; color: var(--wv-t5); }
+.wv-rating-num .wv-m {
+  font-size: 11px; color: var(--wv-t7); line-height: 15px;
+  padding-top: 3px; border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+/* ---------- 面板与分区标题 ---------- */
+.wv-panel {
+  padding: 10px; border-radius: 12px;
+  background: var(--wv-panel); border: 1px solid var(--wv-panel-line);
+}
+.wv-sect {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px; border-radius: 14px;
+  background: var(--wv-panel); border: 1px solid var(--wv-panel-line);
+}
+.wv-sec-head { display: flex; align-items: center; gap: 6px; }
+.wv-sec-head.wv-pb { padding-bottom: 8px; }
+.wv-sec-head .wv-line { flex: 1 1 auto; height: 1px; }
+.wv-sec-head .wv-line.wv-l { background: linear-gradient(90deg, rgba(140, 178, 230, 0), rgba(140, 178, 230, .45)); }
+.wv-sec-head .wv-line.wv-r { background: linear-gradient(90deg, rgba(140, 178, 230, .45), rgba(140, 178, 230, 0)); }
+.wv-dia { width: 7px; height: 7px; flex: 0 0 7px; display: block; }
+.wv-dia svg { display: block; width: 7px; height: 7px; filter: drop-shadow(0 0 4px rgba(120, 160, 220, .85)); }
+/* 分区标题必须明显高于正文字段标签（后者 12.5px / #B3C3D6），
+   上一版两者同字号同亮度，"层次感"就断在这里：加了字距 + 提亮 + 加大到 13.5px */
+.wv-sec-head .wv-t { flex: 0 0 auto; font-size: 13.5px; font-weight: 600; color: #E6EEF9; letter-spacing: 2.5px; line-height: 1; white-space: nowrap; text-shadow: 0 0 8px rgba(140, 178, 230, .35); }
+.wv-sec-head .wv-no {
+  flex: 0 0 auto; font-size: 11px; font-weight: 800; letter-spacing: .5px;
+  color: var(--wv-gold); line-height: 17px; padding: 0 4px;
+  background: rgba(233, 207, 142, .1);
+  border: 1px solid rgba(233, 207, 142, .3); border-radius: 4px;
+}
+.wv-sec-head .wv-en {
+  flex: 0 0 auto; font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
+  color: rgba(140, 178, 230, .6);
+}
+.wv-hr-orn { display: flex; align-items: center; gap: 7px; margin-top: -4px; }
+.wv-hr-orn::before, .wv-hr-orn::after {
+  content: ''; flex: 0 0 3px; width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(233, 207, 142, .5);
+}
+.wv-hr-orn i { flex: 1 1 auto; height: 1px; }
+.wv-hr-orn i:first-child { background: linear-gradient(90deg, rgba(233, 207, 142, 0), rgba(233, 207, 142, .45)); }
+.wv-hr-orn i:last-child { background: linear-gradient(90deg, rgba(233, 207, 142, .45), rgba(233, 207, 142, 0)); }
+.wv-hr-orn b {
+  width: 5px; height: 5px; flex: 0 0 5px; transform: rotate(45deg);
+  background: linear-gradient(180deg, #F0D79A, #B8912B);
+  box-shadow: 0 0 7px rgba(233, 207, 142, .6);
+}
+
+/* ---------- 属性表 ---------- */
+.wv-stat-head {
+  display: flex; align-items: center; gap: 6px; padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.wv-stat-head .wv-nm { flex: 1 1 auto; font-size: 11px; letter-spacing: 1.2px; color: var(--wv-t6); }
+.wv-stat-head .wv-b, .wv-stat-head .wv-a, .wv-stat-head .wv-v2 { font-size: 11px; letter-spacing: .4px; color: var(--wv-t6); text-align: right; }
+/* 列宽必须和下面的 .wv-stat-row 逐列一致，否则"基础/加成/合计"三个表头会比数字
+   整体左偏十几像素，表格立刻显得散（这是原有的对齐缺陷，顺手修掉） */
+.wv-stat-head .wv-b, .wv-stat-head .wv-a { width: 60px; flex: 0 0 60px; }
+.wv-stat-head .wv-v2 { width: 78px; flex: 0 0 78px; }
+.wv-stat-row {
+  display: flex; align-items: center; gap: 6px; padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+.wv-stat-row:last-child { border-bottom: 0; }
+/* 交替条：把明暗差从 .028/.012 拉到 .048/.016，行与行之间才有"一层一层"的节奏 */
+.wv-stat-row.wv-alt {
+  background: linear-gradient(90deg, rgba(255, 255, 255, .048), rgba(255, 255, 255, .014));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045);
+}
+.wv-stat-row .wv-ic { width: 13px; height: 13px; flex: 0 0 13px; }
+.wv-stat-row .wv-nm { flex: 1 1 auto; font-size: 12.5px; color: #B3C3D6; }
+.wv-stat-row .wv-b { width: 60px; flex: 0 0 60px; text-align: right; font-size: 12px; color: var(--wv-t6); }
+.wv-stat-row .wv-b.wv-zero { color: var(--wv-t8); }
+.wv-stat-row .wv-a { width: 60px; flex: 0 0 60px; text-align: right; font-size: 12px; font-weight: 500; color: var(--wv-green); }
+/* 合计列：字级抬高到 17px + 加强金色光晕 —— 大字:小字 由 30:10(=3.0) 拉回 30:10 的层级比，
+   同时让"合计"成为整行的视觉落点（上一版只想把字调清楚，把大字和小字一起放大，
+   结果主次对比被压扁，用户反馈"木有层次感"） */
+.wv-stat-row .wv-v2 { width: 78px; flex: 0 0 78px; text-align: right; font-size: 17px; font-weight: 700; color: var(--wv-gold); text-shadow: 0 0 9px rgba(233, 207, 142, .22); }
+
+/* 属性图标：复用插件原有的雪碧图（resources/character/imgs/icon.png） */
+.wv-stat-row .wv-ic i {
+  display: inline-block; height: 16px; width: 16px;
+  margin: -1px 0 0 -1px;
+  background-image: url("./imgs/icon.png");
+  background-size: auto 16px;
+  filter: drop-shadow(0 0 4px rgba(120, 170, 240, .45));
+}
+.i-hp { background-position: -16px 0; }
+.i-atk { background-position: -32px 0; }
+.i-def { background-position: -48px 0; }
+.i-mastery { background-position: -64px 0; }
+.i-cpct { background-position: -80px 0; }
+.i-cdmg { background-position: -96px 0; }
+.i-stance { background-position: -64px 0; }
+.i-recharge { background-position: -112px 0; }
+.i-dmg { background-position: -128px 0; }
+.i-heal { background-position: -144px 0; }
+.i-speed { background-position: -160px 0; }
+.i-effPct { background-position: -176px 0; }
+.i-effDef { background-position: -192px 0; }
+.i-joy { background-position: -208px 0; }
+
+/* ---------- 武器面板 ---------- */
+.wv-wpn { display: flex; flex-direction: column; gap: 8px; }
+.wv-wpn-row { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+/* 武器图标：放大到 64px，并加内虚线环 + 外四角括号点缀 */
+.wv-wpn-icon-wrap { position: relative; flex: 0 0 64px; width: 64px; height: 64px; border-radius: 14px; }
+.wv-wpn-icon-wrap::after {
+  content: ''; position: absolute; inset: -3px; border-radius: 16px; pointer-events: none;
+  border: 1px dashed rgba(233, 207, 142, .26);
+}
+.wv-wpn-icon-wrap.wv-r5 {
+  padding: 1.5px; border-radius: 14px;
+  background: linear-gradient(160deg, #F0D79A 0%, #A9812F 55%, #F0D79A 100%);
+  box-shadow: 0 0 15px rgba(233, 207, 142, .34);
+}
+.wv-wpn-icon { display: block; width: 100%; height: 100%; border-radius: 12.5px; object-fit: cover; }
+.wv-wpn-lv {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  text-align: center; font-size: 10.5px; font-weight: 800; color: #1A1206;
+  background: linear-gradient(180deg, rgba(245, 226, 174, .96), rgba(220, 187, 110, .96));
+  border-radius: 0 0 12.5px 12.5px; line-height: 16px; letter-spacing: .3px;
+}
+.wv-wpn-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.wv-wpn-name { font-size: 14.5px; font-weight: 700; color: var(--wv-t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wv-wpn-stars svg { display: block; filter: drop-shadow(0 0 5px rgba(233, 207, 142, .5)); }
+.wv-wpn-tags { display: flex; align-items: center; gap: 5px; }
+.wv-wpn-tags .wv-chip {
+  font-size: 11px; font-weight: 500; color: var(--wv-gold); white-space: nowrap;
+  background: rgba(233, 207, 142, .14); padding: 2px 7px;
+}
+.wv-wpn-tags .wv-chip.wv-gray { color: var(--wv-t5); background: rgba(255, 255, 255, .07); }
+.wv-wpn-stats { display: flex; flex-direction: column; gap: 4px; flex: 0 0 92px; }
+.wv-wpn-stats .wv-r { display: flex; align-items: baseline; gap: 6px; }
+.wv-wpn-stats .wv-r + .wv-r { padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, .07); }
+.wv-wpn-stats .wv-k { font-size: 11px; color: var(--wv-t6); white-space: nowrap; }
+.wv-wpn-stats .wv-v { font-size: 16px; font-weight: 800; color: var(--wv-gold); margin-left: auto; text-align: right; text-shadow: 0 0 9px rgba(233, 207, 142, .22); }
+/* 武器被动名（getAffixDesc 的 gs 分支返回 name 为空，改名从 meta.affixTitle 取） */
+.wv-wpn-affix-title {
+  font-size: 11px; font-weight: 700; color: var(--wv-gold);
+  line-height: 17px; letter-spacing: .4px;
+}
+.wv-wpn-affix-title::before {
+  content: ''; display: inline-block; width: 4px; height: 4px; margin-right: 5px;
+  background: linear-gradient(180deg, var(--wv-gold-b), #C09A1D);
+  transform: rotate(45deg); vertical-align: 1px;
+  box-shadow: 0 0 6px rgba(233, 207, 142, .6);
+}
+.wv-wpn-desc {
+  font-size: 11px; color: var(--wv-t5); line-height: 17px;
+  padding-left: 8px; border-left: 2px solid rgba(233, 207, 142, .3);
+}
+
+/* ---------- 分区副标行 ---------- */
+.wv-subrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wv-subrow .wv-set { font-size: 12.5px; font-weight: 500; color: var(--wv-gold); }
+.wv-subrow .wv-hint { font-size: 11px; color: var(--wv-t6); }
+
+/* 副标行右侧：有效词条计数 + 细进度条（权重表缺失时模板不渲染，改显示 wv-hint） */
+.wv-subrow .wv-uf { display: inline-flex; align-items: center; gap: 6px; }
+.wv-subrow .wv-uf-k { font-size: 11px; letter-spacing: .5px; color: var(--wv-t6); }
+.wv-subrow .wv-uf-v { font-size: 12.5px; font-weight: 700; color: var(--wv-gold-b); font-variant-numeric: tabular-nums; }
+.wv-subrow .wv-uf-v i { font-style: normal; font-size: 11px; font-weight: 500; color: var(--wv-t6); }
+.wv-subrow .wv-uf-bar {
+  display: inline-block; width: 54px; height: 3px; border-radius: 2px;
+  background: rgba(140, 178, 230, .16); overflow: hidden;
+}
+.wv-subrow .wv-uf-bar b {
+  display: block; height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(233, 207, 142, .45), var(--wv-gold-b));
+}
+
+/* ---------- 圣遗物评分（六格网格首格） ---------- */
+.wv-rscore {
+  box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px; border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .028));
+  border: 1px solid rgba(233, 207, 142, .26);
+}
+.wv-rscore-head { position: relative; display: flex; align-items: center; gap: 5px; height: 17px; }
+/* 头部下方渐隐金线（第 18 轮，对齐 .wv-char-name/.wv-sec-head 的装饰语言） */
+.wv-rscore-head::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(233, 207, 142, .35), rgba(233, 207, 142, 0) 72%);
+}
+.wv-rscore-head .wv-dm { width: 8px; height: 8px; flex: 0 0 8px; }
+.wv-rscore-head .wv-dm svg { display: block; width: 8px; height: 8px; filter: drop-shadow(0 0 4px rgba(233, 207, 142, .6)); }
+.wv-rscore-head .wv-dm svg path { fill: #E9CF8E; }
+.wv-rscore-head .wv-g { margin-left: auto; border-radius: 4px; }
+.wv-rscore-title { font-size: 11.5px; font-weight: 500; color: var(--wv-t3); letter-spacing: .6px; white-space: nowrap; }
+.wv-rscore-avg { display: flex; align-items: baseline; gap: 3px; line-height: 1; font-size: 11px; color: var(--wv-t6); margin-top: -2px; }
+.wv-rscore-avg b { font-size: 24px; font-weight: 900; line-height: 1; color: var(--wv-gold-b); letter-spacing: -.5px; text-shadow: 0 0 10px rgba(240, 215, 154, .30); }
+.wv-rscore-avg .wv-mx { font-size: 11px; color: var(--wv-t7); }
+.wv-rscore-bar { position: relative; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.wv-rscore-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #9C7BE0, #C4A2FF 45%, #E9CF8E); }
+.wv-rscore-bar .wv-tk { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(9, 20, 38, .5); }
+.wv-rscore-parts { display: flex; flex-direction: column; gap: 0; margin-top: 1px; }
+/* 部位行：与圣遗物卡词条行同一套「格子 + 线」语言，整块圣遗物区才是一个体系 */
+.wv-rpart {
+  display: flex; align-items: center; gap: 6px; height: 21px; padding: 0 6px;
+  border-bottom: 1px solid rgba(140, 178, 230, .14);
+}
+.wv-rpart:last-child { border-bottom: 0; }
+.wv-rpart:nth-child(even) { background: rgba(3, 10, 22, .50); }
+.wv-rpart:nth-child(odd) { background: rgba(160, 200, 250, .085); }
+.wv-rpart .wv-s { width: 38px; flex: 0 0 38px; font-size: 11px; line-height: 16px; color: var(--wv-t6); letter-spacing: .2px; }
+.wv-rpart .wv-pb { flex: 1 1 auto; min-width: 0; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .09); overflow: hidden; }
+.wv-rpart .wv-pb i { display: block; height: 100%; border-radius: 2px; }
+.wv-rpart .wv-n { width: 28px; flex: 0 0 28px; text-align: right; font-size: 11px; line-height: 16px; font-weight: 800; }
+.wv-rscore-div { height: 1px; margin-top: auto; background: linear-gradient(90deg, rgba(233, 207, 142, .06), rgba(233, 207, 142, .3), rgba(233, 207, 142, .06)); }
+.wv-rscore-metrics { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; }
+.wv-rscore-metrics .wv-m { display: flex; align-items: baseline; gap: 3px; white-space: nowrap; }
+.wv-rscore-metrics .wv-m .wv-k { font-size: 11px; color: var(--wv-t7); line-height: 17px; }
+.wv-rscore-metrics .wv-m .wv-v { font-size: 12.5px; font-weight: 800; color: var(--wv-gold-b); line-height: 17px; }
+
+/* ---------- 词条网格 ---------- */
+.wv-affix-grid { display: grid; gap: 8px; }
+.wv-affix {
+  box-sizing: border-box;
+  display: flex; align-items: center; gap: 4px; padding: 5px 7px;
+  border-radius: 8px;
+  /* 不透明深底 + 噪点磨砂 + 三段受光渐变（2026-10-15 用户反馈"背景太虚/没有磨砂感"）。
+     background-color 与 background-image 分开写：`background:` 简写的 <color> 只能在最后一层，
+     噪点层必须走 image 列表 */
+  background-color: var(--wv-tile-bg);
+  background-image:
+    var(--wv-noise),
+    linear-gradient(118deg, transparent 38%, rgba(190, 225, 255, .05) 47%, rgba(255, 255, 255, .07) 50%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, .072), rgba(255, 255, 255, .016) 40%, rgba(2, 6, 16, .13));
+  background-size: 160px 160px, 100% 100%, 100% 100%;
+  border: 1px solid rgba(140, 178, 230, .15);
+}
+.wv-affix .wv-n { width: 32px; flex: 0 0 32px; font-size: 11.5px; line-height: 16px; font-weight: 700; color: var(--wv-gold-b); }
+.wv-affix .wv-k { flex: 1 1 auto; min-width: 0; font-size: 11.5px; line-height: 16px; color: var(--wv-t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wv-affix .wv-v { width: 56px; flex: 0 0 56px; text-align: right; font-size: 11.5px; line-height: 16px; font-weight: 600; color: var(--wv-green); }
+
+/* ---------- 有效 / 无效词条区分 ----------
+   口径与 miao 一致：charWeight[key] > 0 才算有效（详见 ProfileDetail.js 的 isUseful）。
+   有效项：金缘 + 微金底 + 内发光，数值维持绿色，作为视觉主角。
+   无效项：整体压哑（降透明度 + 去金去绿），但仍保持可读，避免词条区显得"破洞"。 */
+.wv-affix:not(.wv-off) {
+  /* 金态底 = 小卡实底 + 金色受光渐变（顶部金、底部暗，仍是凸面受光逻辑） */
+  background-color: var(--wv-tile-bg);
+  background-image: var(--wv-noise), linear-gradient(180deg, rgba(233, 207, 142, .16), rgba(233, 207, 142, .03) 45%, rgba(2, 6, 16, .14));
+  background-size: 160px 160px, 100% 100%;
+  border-color: rgba(233, 207, 142, .40);
+  /* 本规则(2 class)会盖掉 L3 的基础落影，必须把立体三件套一起带下来：
+     金色内晕 + 内上高光 + 内下暗边 + 外落影 + 磨砂内漫射 */
+  box-shadow:
+    inset 0 0 14px rgba(233, 207, 142, .12),
+    inset 0 0 22px -10px rgba(140, 178, 230, .13),
+    inset 0 1px 0 rgba(255, 255, 255, .20),
+    inset 0 -1px 0 rgba(3, 8, 18, .42),
+    0 3px 9px -3px rgba(0, 0, 0, .58),
+    0 1px 2px -1px rgba(0, 0, 0, .40),
+    0 0 10px rgba(233, 207, 142, .05);
+}
+.wv-affix:not(.wv-off) .wv-k { color: var(--wv-t2); }
+
+/* 无效项：整体压哑（去金去绿 + 适度压暗），但仍必须可读。
+   ⚠ 压暗手段不能用 opacity —— 像素级实测 opacity .45~.55 时对比度只有 1.2~1.7（❌）。
+   现在统一用「灰蓝 t6 + opacity .78~.86」，实测 3.2~3.5:1；"无效"的观感由
+   词条格自身不给金框金底来承担，而不是把字压到看不清。 */
+.wv-affix.wv-off {
+  /* 无效态也垫实底（比有效态暗半档），但保持磨砂与立体——"无效"的语义由
+     去金框 + 冷灰细标 + 字色压灰承担，而不是把卡身做虚 */
+  background-color: rgba(14, 25, 45, .95);
+  background-image: var(--wv-noise), linear-gradient(180deg, rgba(255, 255, 255, .022), rgba(255, 255, 255, .008) 45%, rgba(2, 6, 16, .12));
+  background-size: 160px 160px, 100% 100%;
+  border-color: rgba(140, 178, 230, .07);
+}
+.wv-affix.wv-off .wv-n { color: var(--wv-t6); opacity: .80; }
+.wv-affix.wv-off .wv-k { color: var(--wv-t6); opacity: .86; }
+.wv-affix.wv-off .wv-v { color: var(--wv-t6); opacity: .82; }
+
+/* charWeight 缺失（权重表查不到该角色）时不做有效性判定：
+   退回中性样式 —— 既不镀金也不压暗，避免把全部词条误标成「有效」。
+   specificity(3 class) > .wv-affix:not(.wv-off)(2 class)，无需调整源码顺序。 */
+.wv-affix-grid.wv-plain .wv-affix {
+  background-color: var(--wv-tile-bg);
+  background-image:
+    var(--wv-noise),
+    linear-gradient(118deg, transparent 38%, rgba(190, 225, 255, .05) 47%, rgba(255, 255, 255, .07) 50%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, .072), rgba(255, 255, 255, .016) 40%, rgba(2, 6, 16, .13));
+  background-size: 160px 160px, 100% 100%, 100% 100%;
+  border-color: rgba(140, 178, 230, .15);
+  /* 不删 box-shadow：基础 .wv-affix 现在带的就是无金立体阴影，plain 直接继承即可 */
+}
+.wv-affix-grid.wv-plain .wv-affix::after {
+  width: 2px;
+  background: linear-gradient(180deg, rgba(233, 207, 142, .55), rgba(233, 207, 142, .12));
+}
+.wv-affix-grid.wv-plain .wv-affix::before { opacity: 1; }
+/* 连文字也一并复位（4 class > .wv-affix.wv-off .wv-* 的 3 class），
+   保证 wv-plain 是一个完整的"不判定"态，而不是半灰半金 */
+.wv-affix-grid.wv-plain .wv-affix .wv-n { color: var(--wv-gold-b); opacity: 1; }
+.wv-affix-grid.wv-plain .wv-affix .wv-k { color: var(--wv-t3); opacity: 1; }
+.wv-affix-grid.wv-plain .wv-affix .wv-v { color: var(--wv-green); opacity: 1; }
+
+/* ---------- 圣遗物网格：3 列 × 2 行等宽等行高 ---------- */
+.wv-relic-grid {
+  /* 第 30 轮：回到老版同款 3 列（用户拍板） */
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(176px, auto);
+  gap: 8px;
+}
+.wv-relic-grid > * { box-sizing: border-box; min-width: 0; }
+.wv-relic {
+  position: relative; /* 右上图标 / 词条行内绝对定位元素的基准 */
+  display: flex; flex-direction: column; gap: 5px; padding: 7px 0 5px;
+  border-radius: 10px;
+  /* 不透明深底 + 噪点磨砂 + 三段受光渐变（同 .wv-affix，2026-10-15）。
+     第 18 轮加一层 118° 斜向玻璃流光（α .05，压在受光渐变之上、噪点之下），
+     模拟斜光扫过磨砂玻璃的高光带；透明段 42%~58% 之外全透明，不会伤文字对比度。
+     overflow:hidden 让词条行的通栏格子被圆角裁切 */
+  overflow: hidden;
+  background-color: var(--wv-tile-bg);
+  background-image:
+    var(--wv-noise),
+    linear-gradient(118deg, transparent 38%, rgba(190, 225, 255, .05) 47%, rgba(255, 255, 255, .07) 50%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, .078), rgba(255, 255, 255, .018) 40%, rgba(2, 6, 16, .14));
+  background-size: 160px 160px, 100% 100%, 100% 100%;
+  border: 1px solid rgba(140, 178, 230, .17);
+}
+/* 顶部图标：参考图位置（右上 60px 大图标），名称让位、评分行通栏 —— 
+   +20 强化等级胶囊停在图标左下角之上（z-index 3），既不遮挡文字、也不会被卡片右边缘切掉 */
+.wv-relic-icon {
+  position: absolute; top: 6px; right: 8px; width: 60px; height: 60px;
+  border-radius: 12px; object-fit: cover; z-index: 1;
+  box-shadow:
+    0 0 0 1px rgba(233, 207, 142, .28),
+    0 0 0 3px rgba(19, 32, 58, .90),
+    0 0 0 4px rgba(140, 178, 230, .16),
+    0 2px 6px -1px rgba(0, 0, 0, .55);
+}
+/* 头部容器：min-height 撑到图标高度，否则 60px 图标会压到第一行词条
+   （老版 .head 的 padding: 12px 0 8px 68px 起的就是这个作用） */
+.wv-relic-head { position: relative; min-height: 59px; padding: 0 8px; }
+.wv-relic-name { margin-right: 68px; font-size: 13.5px; font-weight: 800; color: #D6E2F0; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wv-relic-score {
+  display: flex; align-items: center; gap: 3px; margin-top: 3px;
+  font-size: 11.5px; line-height: 17px; height: 17px;
+  white-space: nowrap; /* 3 列卡窄，「54.7分 - ACE +20」必须单行，不许折行 */
+}
+.wv-relic-score > * { flex: 0 0 auto; }
+.wv-relic-score .wv-snum { font-size: 13.5px; font-weight: 900; }
+.wv-relic-score .wv-sdash { color: var(--wv-t6); }
+.wv-relic-score .wv-g { border-radius: 4px; }
+/* +等级：金字深底小胶囊；z-index 高于图标，停在图标左下角之上（参考图同款），
+   底色提到 .92 不透明，压在彩色图标上也读得清 */
+.wv-relic-lv {
+  margin-left: auto; position: relative; z-index: 3;
+  font-size: 10.5px; font-weight: 800; line-height: 16px; color: var(--wv-gold-b);
+  background: rgba(6, 14, 28, .92); border: 1px solid rgba(233, 207, 142, .45);
+  border-radius: 5px; padding: 0 5px; white-space: nowrap;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, .55);
+}
+/* 词条区：老版层级 = 交替「格子」+ 行「线」。
+   格子用「深 / 浅」拉开明度差，读得出是一行一行的单元格（第 30 轮用户点名要的层级感） */
+.wv-relic-list { display: flex; flex-direction: column; margin: 3px 0 0; padding: 0; list-style: none; }
+.wv-relic-list li {
+  position: relative; display: flex; align-items: center; justify-content: space-between;
+  height: 25px; line-height: 25px; padding: 0 8px 0 34px; font-size: 12.5px;
+  border-bottom: 1px solid rgba(140, 178, 230, .16);
+}
+.wv-relic-list li:last-child { border-bottom: 0; }
+/* 格子：交替底色（老版 .detail.attr li:nth-child(even/odd) 的现代版，拉大明度差） */
+.wv-relic-list li:nth-child(even) { background: rgba(3, 10, 22, .50); }
+.wv-relic-list li:nth-child(odd) { background: rgba(160, 200, 250, .085); }
+.wv-relic-list .wv-k { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--wv-t2); }
+.wv-relic-list .wv-v { flex: 0 0 auto; margin-left: 8px; font-weight: 700; color: var(--wv-t2); font-variant-numeric: tabular-nums; }
+/* 主词条：整行加粗放大，数值绿色（参考图同款） */
+.wv-relic-list .wv-r-main { height: 27px; line-height: 27px; padding-left: 8px; font-size: 13.5px; font-weight: 800; }
+.wv-relic-list .wv-r-main .wv-k { color: var(--wv-t1); }
+.wv-relic-list .wv-r-main .wv-v { color: var(--wv-green); font-weight: 800; }
+/* 等效词条数：老版 i.eff 同款小胶囊（深底 + 细边，压在格子上要能看出是"芯片"） */
+.wv-relic-list .wv-eq {
+  position: absolute; left: 6px; top: 4px; width: 24px; height: 17px; line-height: 16px;
+  text-align: center; font-style: normal; font-weight: 700; font-size: 11px;
+  color: var(--wv-t2); background: rgba(6, 16, 34, .88);
+  border: 1px solid rgba(140, 178, 230, .26); border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+}
+/* 强化箭头：直接复用老版真实素材 up-num-icon*.png（精灵图纵向 5 档，每档 8px 高） */
+.wv-relic-list .wv-up {
+  position: absolute; left: 96px; top: 9px; width: 50px; height: 8px;
+  background-image: url(./imgs/up-num-icon1.png); background-repeat: no-repeat; background-size: auto 500%;
+}
+.wv-relic-list .wv-up.up-2 { background-position: 0 -32px; }
+.wv-relic-list .wv-up.up-3 { background-position: 0 -24px; }
+.wv-relic-list .wv-up.up-4 { background-position: 0 -16px; }
+.wv-relic-list .wv-up.up-5 { background-position: 0 -8px; }
+/* 有效 / 无效：老版 great/nouse 同款处理 —— 亮箭头 icon2 vs 暗箭头 icon0，
+   无效行整行压到 t6（仍 ≥3:1 可读，不是"看不清"） */
+.wv-relic-list li.wv-on .wv-up { background-image: url(./imgs/up-num-icon2.png); }
+.wv-relic-list li.wv-off .wv-k, .wv-relic-list li.wv-off .wv-v { color: var(--wv-t6); }
+.wv-relic-list li.wv-off .wv-eq { color: var(--wv-t6); }
+.wv-relic-list li.wv-off .wv-up { background-image: url(./imgs/up-num-icon0.png); }
+.wv-relic-div { position: relative; height: 1px; margin: 1px 0; background: linear-gradient(90deg, rgba(140, 178, 230, .06), rgba(140, 178, 230, .28), rgba(140, 178, 230, .06)); }
+/* 分隔线点缀：中央金菱形（对齐 HUD 分段条的菱形语言）+ 两侧 3px 刻点 */
+.wv-relic-div::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px;
+  margin: -2.5px 0 0 -2.5px; transform: rotate(45deg); pointer-events: none;
+  background: linear-gradient(135deg, rgba(240, 215, 154, .85), rgba(185, 145, 43, .40));
+  box-shadow: 0 0 5px rgba(233, 207, 142, .30);
+}
+.wv-relic-div::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(233, 207, 142, .45), rgba(233, 207, 142, .45)),
+    linear-gradient(rgba(233, 207, 142, .45), rgba(233, 207, 142, .45));
+  background-size: 3px 1px, 3px 1px;
+  background-position: calc(50% - 10px) 0, calc(50% + 7px) 0;
+  background-repeat: no-repeat;
+}
+/* 单件圣遗物副词条按有效/无效区分：无效行整行压到 t6（不是压到看不清）。
+   第 30 轮起随「格子 + 线」重做，规则统一在上面词条区那一块，这里不再重复定义。 */
+
+/* 通用评分胶囊
+   ★ 深色芯片底：评级字是红/金等彩色，直接压在评级色半透明底 + 主题亮底图上，
+     像素级实测 MAX 只有 2.49:1（❌）。统一给深色芯片，让彩色字有确定性的暗底；
+     模板 inline 传入的评级底色用 !important 压掉（评级身份仍由字色 + 外圈光晕承担）。 */
+.wv-g {
+  display: inline-block; padding: 0 4px; font-size: 11px; font-weight: 800;
+  line-height: 16px; letter-spacing: .3px; border-radius: 4px;
+  background-color: rgba(4, 9, 18, .92) !important;
+}
+
+/* ---------- 评级高亮档位：MAX / ACE 同为红色系，只用「高亮强度」拉开档次 ----------
+   色值与底色浓度由模板 inline 传入（ProfileDetail.js 的 GRADE_HEX / GRADE_ALPHA），
+   这里只负责发光、字重与卡面光圈。强度阶梯：
+     MAX = 亮红 #FF4D4F · 字重 900 · 双层发光（外描边 + 外发光 + 白色内芯）· 卡面红圈
+     ACE = 正红 #FF3B30 · 字重 800 · 单层弱发光 · 极淡卡面红圈
+   两者色相相同，靠"亮 / 更亮"和"发光有无"区分，符合本地 .mark-MAX/.mark-ACE 的口径。 */
+.wv-g.wv-grade-MAX {
+  font-weight: 900;
+  /* 双层外描边 + 强外发光营造"更亮"：注意发光只能用纯红，
+     上一版加了白色内芯 rgba(255,255,255,.35)，在深红底上会把字糊成粉色、反而比 ACE 更不清楚 */
+  box-shadow: 0 0 0 1px rgba(255, 77, 79, .85), 0 0 0 2px rgba(255, 77, 79, .18), 0 0 12px rgba(255, 77, 79, .6);
+  text-shadow: 0 0 3px rgba(255, 77, 79, .45);
+}
+.wv-g.wv-grade-ACE {
+  font-weight: 800;
+  box-shadow: 0 0 0 1px rgba(255, 59, 48, .34);
+  text-shadow: 0 0 2px rgba(255, 59, 48, .35);
+}
+
+/* 单件卡分数数字 */
+.wv-relic-score .wv-snum.wv-grade-MAX { text-shadow: 0 0 9px rgba(255, 77, 79, .9); }
+.wv-relic-score .wv-snum.wv-grade-ACE { text-shadow: 0 0 5px rgba(255, 59, 48, .55); }
+
+/* 评分卡五条部位条：数字与色条同步发光 */
+.wv-rpart .wv-n.wv-grade-MAX { text-shadow: 0 0 7px rgba(255, 77, 79, .85); }
+.wv-rpart .wv-n.wv-grade-ACE { text-shadow: 0 0 4px rgba(255, 59, 48, .5); }
+.wv-rpart .wv-pb i.wv-grade-MAX { box-shadow: 0 0 7px rgba(255, 77, 79, .8); }
+.wv-rpart .wv-pb i.wv-grade-ACE { box-shadow: 0 0 4px rgba(255, 59, 48, .45); }
+
+/* 卡面：顶部评级色条外发光 + 整卡红色光圈（卡本身无 overflow:hidden，光晕不会被裁）
+   注意这两条 2-class 规则会盖掉上面「立体层次」里 .wv-relic / .wv-rscore 的落影，
+   所以必须把落影（L3 2026-10-15 加重版）一起带下来，否则 MAX/ACE 的卡反而比普通卡"平"。 */
+.wv-relic.wv-grade-MAX, .wv-rscore.wv-grade-MAX {
+  border-color: rgba(255, 77, 79, .34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 77, 79, .30),
+    inset 0 -1px 0 rgba(3, 8, 18, .42),
+    inset 0 0 22px -10px rgba(140, 178, 230, .13),
+    0 0 14px rgba(255, 77, 79, .16),
+    0 3px 9px -3px rgba(0, 0, 0, .58),
+    0 1px 2px -1px rgba(0, 0, 0, .40);
+}
+.wv-relic.wv-grade-ACE, .wv-rscore.wv-grade-ACE {
+  border-color: rgba(255, 59, 48, .16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 59, 48, .16),
+    inset 0 -1px 0 rgba(3, 8, 18, .42),
+    inset 0 0 22px -10px rgba(140, 178, 230, .13),
+    0 3px 9px -3px rgba(0, 0, 0, .58),
+    0 1px 2px -1px rgba(0, 0, 0, .40);
+}
+.wv-relic.wv-grade-MAX::after, .wv-rscore.wv-grade-MAX::after { box-shadow: 0 0 9px rgba(255, 77, 79, .95); }
+.wv-relic.wv-grade-ACE::after, .wv-rscore.wv-grade-ACE::after { box-shadow: 0 0 5px rgba(255, 59, 48, .5); }
+
+/* 评分环：弧线渐变已由模板的 card.ringStops 切成红色系（MAX/ACE），
+   这里把环的外发光与中心评级字也一并改成红色，否则会出现"红环紫字"。
+
+   同时必须让 MAX / ACE **一眼可分**（只有发光强弱在 76px 的小环上不够看），
+   所以叠了四层可见差异：①环身粗细 6.5px vs 5px ②渐变亮度（RING_GRAD 已分）
+   ③外圈刻度环 密而亮 vs 疏而暗 ④中心字 16px/900 亮红 vs 15px/700 正红。
+   注意 stroke-width 是 SVG 呈递属性，优先级等同于 `*`，CSS 规则一定能盖住它。 */
+.wv-rating-ring.wv-grade-MAX svg circle { stroke-width: 6.5px; }
+.wv-rating-ring.wv-grade-ACE svg circle { stroke-width: 5px; }
+.wv-rating-ring.wv-grade-MAX svg {
+  filter: drop-shadow(0 0 7px rgba(255, 91, 91, .95)) drop-shadow(0 0 20px rgba(255, 77, 79, .45));
+}
+.wv-rating-ring.wv-grade-ACE svg {
+  filter: drop-shadow(0 0 5px rgba(232, 54, 43, .55)) drop-shadow(0 0 14px rgba(255, 59, 48, .18));
+}
+/* 外圈刻度环：MAX 更密更亮，ACE 更疏更暗（两者都是红色，避免 ACE 出现金色刻度而显得"不红"） */
+.wv-rating-ring.wv-grade-MAX::after {
+  background: repeating-conic-gradient(from 0deg,
+    rgba(255, 77, 79, .62) 0deg 2deg, rgba(255, 77, 79, 0) 2deg 15deg);
+}
+.wv-rating-ring.wv-grade-ACE::after {
+  background: repeating-conic-gradient(from 0deg,
+    rgba(255, 59, 48, .3) 0deg 1deg, rgba(255, 59, 48, 0) 1deg 15deg);
+}
+.wv-rating-ring .wv-grade.wv-grade-MAX {
+  color: #FF9A93;
+  font-size: 16px; font-weight: 900;
+  text-shadow: 0 0 10px rgba(255, 77, 79, 1), 0 1px 2px rgba(5, 13, 26, .9);
+}
+.wv-rating-ring .wv-grade.wv-grade-ACE {
+  color: #FF6A60;
+  font-size: 15px; font-weight: 700;
+  text-shadow: 0 0 7px rgba(255, 59, 48, .7), 0 1px 1px rgba(5, 13, 26, .85);
+}
+
+/* ---------- 伤害计算表 ---------- */
+.wv-table { display: flex; flex-direction: column; gap: 2px; border-radius: 10px; overflow: hidden; }
+.wv-tr { display: flex; align-items: center; padding: 7px 10px; position: relative; }
+.wv-tr::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: rgba(140, 178, 230, .2);
+}
+.wv-tr .wv-c0 { flex: 1 1 auto; min-width: 0; text-align: center; font-size: 12px; color: var(--wv-t3); }
+.wv-tr .wv-c1 { width: 112px; flex: 0 0 112px; text-align: center; font-size: 12.5px; font-weight: 600; color: #E4EDF8; }
+.wv-tr .wv-c2 { width: 112px; flex: 0 0 112px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--wv-blue); }
+.wv-tr.wv-odd { background: rgba(255, 255, 255, .022); }
+.wv-tr.wv-even { background: rgba(255, 255, 255, .062); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045); }
+.wv-tr.wv-head { padding: 8px 10px; background: rgba(233, 207, 142, .10); }
+.wv-tr.wv-head::before { background: linear-gradient(180deg, rgba(233, 207, 142, .95), rgba(233, 207, 142, .22)); }
+.wv-tr.wv-head .wv-c0, .wv-tr.wv-head .wv-c1, .wv-tr.wv-head .wv-c2 { font-size: 11.5px; font-weight: 500; color: var(--wv-gold); }
+.wv-tr.wv-total { padding: 9px 10px; background: rgba(233, 207, 142, .12); border-top: 1px solid rgba(233, 207, 142, .3); }
+.wv-tr.wv-total::before { background: linear-gradient(180deg, #F0D79A, #B8912B); box-shadow: 0 0 8px rgba(233, 207, 142, .55); }
+.wv-tr.wv-total .wv-c0 { font-size: 12.5px; font-weight: 700; color: var(--wv-gold); }
+.wv-tr.wv-total .wv-c1 { font-size: 15px; font-weight: 700; color: var(--wv-gold-b); text-shadow: 0 0 9px rgba(240, 215, 154, .28); }
+.wv-tr.wv-total .wv-c2 { font-size: 15px; font-weight: 700; color: var(--wv-blue); text-shadow: 0 0 9px rgba(92, 210, 255, .28); }
+.wv-diff { font-style: normal; font-size: 11px; margin-left: 4px; opacity: .85; color: #43ff43; }
+.wv-diff:empty { display: none; }
+
+/* ---------- 排名统计 ---------- */
+.wv-rank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wv-rank-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 8px; border-radius: 10px;
+  background-color: var(--wv-tile-bg);
+  background-image: var(--wv-noise), linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .018) 40%, rgba(2, 6, 16, .14));
+  background-size: 160px 160px, 100% 100%;
+  border: 1px solid rgba(140, 178, 230, .15);
+}
+.wv-chart { width: 100%; height: 150px; }
+.wv-no-data {
+  width: 100%; height: 150px; display: flex; align-items: center; justify-content: center;
+  color: rgba(255, 255, 255, .3); font-size: 16px; font-weight: 700;
+  transform: rotate(-12deg); pointer-events: none;
+}
+.wv-rank-label { font-size: 12.5px; font-weight: 600; color: var(--wv-t2); line-height: 1.4; }
+.wv-rank-sub { font-size: 11.5px; color: var(--wv-gold); text-align: center; line-height: 1.4; }
+
+/* ---------- 立体层次（Z 轴）：三级抬升 ----------
+   原先这里只有一条 `inset 0 1px 0 rgba(255,255,255,.055)` 的顶部内高光：
+   所有面板都是"贴在底图上的一张纸"——没有落影就没有 Z 轴，面与面之间只靠 1px 描边
+   区分，观感发平（用户反馈"木有层次感和立体质感"）。
+   现在按层级给三档，每档都是「内上高光（受光面）+ 内下暗边（背光面）+ 外落影（投影）」
+   三件套，模拟真实受光关系：
+     L1 .wv-sect     分区外壳 —— 最高，落影最重
+     L2 .wv-panel 等 区内面板 —— 中，落影适中
+     L3 .wv-affix/.wv-relic 小方块 —— 最低，落影最轻，只表现"贴片厚度"
+   注意：本块用 1 个 class 的选择器，所以 .wv-affix:not(.wv-off)、
+   .wv-affix-grid.wv-plain .wv-affix、.wv-relic.wv-grade-* 等更高优先级规则照常覆盖，
+   三态词条与评级红色光圈的既有行为不受影响。 */
+.wv-sect {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .19),
+    inset 0 2px 0 rgba(255, 255, 255, .05),
+    inset 0 -1px 0 rgba(3, 8, 18, .46),
+    inset 1px 0 0 rgba(255, 255, 255, .035),
+    inset -1px 0 0 rgba(3, 8, 18, .26),
+    inset 0 0 30px -12px rgba(140, 178, 230, .13),
+    0 9px 22px -10px rgba(0, 0, 0, .70),
+    0 2px 4px -1px rgba(0, 0, 0, .40);
+}
+.wv-panel, .wv-talent-panel, .wv-rating, .wv-hdr {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .17),
+    inset 0 -1px 0 rgba(3, 8, 18, .38),
+    inset 0 0 26px -12px rgba(140, 178, 230, .11),
+    0 4px 13px -6px rgba(0, 0, 0, .58),
+    0 1px 3px -1px rgba(0, 0, 0, .34);
+}
+/* .wv-rscore 与 .wv-relic 是同尺寸的"小卡"，必须同档，否则并排看会一大一小地飘。
+   2026-10-15 加重：用户反馈"不够立体"。L3 原来只有 0 2px 6px -3px 一层轻落影，
+   现在落影双层（近距硬影 + 远距软影）+ 内上高光提到 .085 + 内下暗边加深，
+   另加 inset 冰蓝漫射（磨砂玻璃被光打透的边缘泛光），与 --wv-noise 颗粒配合出磨砂感 */
+.wv-affix, .wv-relic, .wv-rscore {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .20),
+    inset 0 -1px 0 rgba(3, 8, 18, .42),
+    inset 0 0 22px -10px rgba(140, 178, 230, .13),
+    0 3px 9px -3px rgba(0, 0, 0, .58),
+    0 1px 2px -1px rgba(0, 0, 0, .40);
+  /* 玻璃：把透上来的主题六边形底纹虚化，否则它是"清晰的图案"而不是磨砂 */
+  backdrop-filter: blur(3px) saturate(1.05);
+  -webkit-backdrop-filter: blur(3px) saturate(1.05);
+}
+
+/* 受光渐变：面板顶部偏亮、底部偏暗，模拟光源自上而下打在凸起面上。
+   这一步比"落影"更关键 —— 深色底上黑色投影几乎看不见（黑压黑），
+   真正让人读出"这块板是浮起来的"是**面本身的明度渐变**。
+
+   ★ 第三层 rgba(16,28,52,.93) 是「不透明暗底」，这是可读性的地基，不能删：
+     主题给 .profile-cont 的底图是一张**浅蓝色**抽象图（见 blue-glass-theme.css 的 base64），
+     background-size:cover 在 600×1900 这种极端长宽比下只裁出中间一条竖切并放大约 1.8 倍，
+     实测卡底亮度从顶部 #172a45 一路变亮到 #535d6c、局部近白 —— 半透明面板（62%）叠上去，
+     有效背景亮度被抬到 ~0.13，小字对比度直接腰斩（像素级实测 ❌66 处 <3.0）。
+     这层把面板有效底色钉死在 ~0.035，文字对比度不再随底图漂移；
+     只留 7% 透出底图，保住一点"蓝玻璃"的通透感。色相取自主题 --bg-panel 的 RGB。
+
+   ⚠ 只处理"原来是纯色 var(--wv-panel)"的那几个面板。
+   .wv-relic / .wv-affix / .wv-rscore 现在也各自带不透明实底（--wv-tile-bg）+ 噪点磨砂
+   （2026-10-15 用户反馈"背景太虚/没有磨砂感"后加），定义在各自的规则里，这里不要合并它们。 */
+.wv-sect, .wv-panel, .wv-talent-panel, .wv-rating {
+  /* 最终版：大面板也铺磨砂噪点（此前只有圣遗物小卡有），整卡质感统一。
+     第 27 轮提亮：深蓝灰 rgba(16,28,52,.93) → 更高明度、更饱和的蓝 rgba(30,56,100,.90)，
+     顶部受光高光从 .052 抬到 .085，整卡不再发灰；仍是不透明暗底，文字对比度地基不变 */
+  background-color: rgba(30, 56, 100, .90);
+  background-image:
+    var(--wv-noise),
+    linear-gradient(118deg, transparent 37%, rgba(190, 225, 255, .045) 47%, rgba(255, 255, 255, .06) 50%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, .11) 0%, rgba(255, 255, 255, .022) 36%, rgba(2, 6, 16, .12) 100%);
+  background-size: 160px 160px, 100% 100%, 100% 100%;
+  /* 玻璃的关键一步：让透上来的主题底纹（六边形）被虚化 ——
+     不虚化的话它是一张"清晰的图案"压在卡下，读起来像贴图而不是磨砂玻璃 */
+  backdrop-filter: blur(4px) saturate(1.06);
+  -webkit-backdrop-filter: blur(4px) saturate(1.06);
+}
+/* .wv-rscore 在左栏，直接坐在卡底图上（不在 .wv-sect 里），必须自带暗底；噪点磨砂 + 斜向流光同圣遗物卡。
+   第 30 轮：受光渐变也对齐 .wv-relic（末段压暗），否则它比同排圣遗物卡明显更亮、不一个体系 */
+.wv-rscore {
+  background-color: var(--wv-tile-bg);
+  background-image:
+    var(--wv-noise),
+    linear-gradient(118deg, transparent 38%, rgba(190, 225, 255, .05) 47%, rgba(255, 255, 255, .07) 50%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, .078), rgba(255, 255, 255, .018) 40%, rgba(2, 6, 16, .14));
+  background-size: 160px 160px, 100% 100%, 100% 100%;
+}
+
+/* ---------- 说明 / HUD 条 ---------- */
+.wv-notes {
+  position: relative;
+  display: flex; flex-direction: column; gap: 7px; padding: 12px 14px;
+  border-radius: 12px;
+  /* 深色实底：说明区上方没有任何面板遮挡，下面又紧挨着底部装饰带/主题底图，
+     上一版用 rgba(255,255,255,.025) 近乎全透明，字压上去直接糊掉（用户反馈"看不清"）。
+     这里对齐 --wv-chip-bg 的做法 —— 承载小字的区域一律给深色实底，保证对比度。
+     .95：主题底图下半卡会变亮（见「不透明暗底」注释），90% 仍会透进约 10% 的亮底 */
+  background-color: rgba(9, 17, 32, .95);
+  background-image: var(--wv-noise), linear-gradient(180deg, rgba(11, 21, 38, .95), rgba(7, 14, 27, .94));
+  background-size: 160px 160px, 100% 100%;
+  border: 1px solid rgba(140, 178, 230, .16);
+  box-shadow:
+    inset 0 1px 0 rgba(140, 178, 230, .07),
+    inset 0 -1px 0 rgba(3, 8, 18, .40),
+    0 6px 16px -9px rgba(0, 0, 0, .62);
+}
+.wv-notes::before {
+  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(180deg, rgba(233, 207, 142, .8), rgba(233, 207, 142, .06));
+}
+.wv-notes p { margin: 0; display: flex; align-items: flex-start; gap: 7px; font-size: 11.5px; color: var(--wv-t3); line-height: 19px; }
+.wv-notes p .wv-nt { flex: 1 1 auto; min-width: 0; }
+.wv-notes p .wv-bl {
+  flex: 0 0 auto; width: 5px; height: 5px; margin-top: 6px;
+  background: linear-gradient(180deg, #F0D79A, #C09A1D); transform: rotate(45deg);
+  box-shadow: 0 0 7px rgba(233, 207, 142, .75);
+}
+/* 说明行里的评级词：与徽章共用 wv-grade-* 口径，让「ACE：220 ~ 280 / MAX：280 以上」
+   这行区间说明也能一眼分出两档（MAX 亮红发光，ACE 正红压一档） */
+.wv-notes p span.wv-grade-MAX { color: #FF5B5B; font-weight: 900; text-shadow: 0 0 7px rgba(255, 77, 79, .9); }
+.wv-notes p span.wv-grade-ACE { color: #FF3B30; font-weight: 800; text-shadow: 0 0 5px rgba(255, 59, 48, .55); }
+.wv-hud-blocks { display: flex; align-items: center; gap: 3px; padding: 0 1px; }
+.wv-hud-blocks i { flex: 1 1 auto; height: 3px; border-radius: 1.5px; background: rgba(140, 178, 230, .40); }
+.wv-hud-blocks i:first-child { background: linear-gradient(90deg, rgba(233, 207, 142, .85), rgba(233, 207, 142, .35)); }
+.wv-hud-blocks i:last-child { background: linear-gradient(90deg, rgba(233, 207, 142, .35), rgba(233, 207, 142, .85)); }
+/* 最终版：条带两端加发光端点，与外框角尖节点呼应 */
+.wv-hud-blocks { position: relative; }
+.wv-hud-blocks::after {
+  content: ''; position: absolute; left: -3px; right: -3px; top: 50%; height: 5px;
+  margin-top: -2.5px; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)),
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9));
+  background-size: 3px 5px, 3px 5px;
+  background-position: left center, right center;
+  background-repeat: no-repeat;
+  box-shadow: -3px 0 8px rgba(233, 207, 142, .25), 3px 0 8px rgba(233, 207, 142, .25);
+}
+
+/* ---------- 立绘卡装饰 ---------- */
+.wv-art-fade {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 44%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(4, 10, 20, 0), rgba(4, 10, 20, .76));
+}
+.wv-art-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)) left 6px top 6px / 13px 1px no-repeat,
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)) left 6px top 6px / 1px 13px no-repeat,
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)) right 6px top 6px / 13px 1px no-repeat,
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)) right 6px top 6px / 1px 13px no-repeat,
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)) left 6px bottom 6px / 13px 1px no-repeat,
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)) left 6px bottom 6px / 1px 13px no-repeat,
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)) right 6px bottom 6px / 13px 1px no-repeat,
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)) right 6px bottom 6px / 1px 13px no-repeat;
+}
+
+/* ---------- 面板 HUD 括号（四角补全：左上/右下为长括号，右上/左下为短括号） ---------- */
+.wv-sect, .wv-panel, .wv-talent-panel, .wv-rating, .wv-notes { position: relative; }
+.wv-sect::after, .wv-panel::after, .wv-talent-panel::after, .wv-rating::after, .wv-notes::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background-image:
+    linear-gradient(rgba(233, 207, 142, .55), rgba(233, 207, 142, .55)),
+    linear-gradient(rgba(233, 207, 142, .55), rgba(233, 207, 142, .55)),
+    linear-gradient(rgba(233, 207, 142, .38), rgba(233, 207, 142, .38)),
+    linear-gradient(rgba(233, 207, 142, .38), rgba(233, 207, 142, .38)),
+    linear-gradient(rgba(140, 178, 230, .42), rgba(140, 178, 230, .42)),
+    linear-gradient(rgba(140, 178, 230, .42), rgba(140, 178, 230, .42)),
+    linear-gradient(rgba(140, 178, 230, .58), rgba(140, 178, 230, .58)),
+    linear-gradient(rgba(140, 178, 230, .58), rgba(140, 178, 230, .58));
+  background-size: 14px 1px, 1px 14px, 8px 1px, 1px 8px, 8px 1px, 1px 8px, 14px 1px, 1px 14px;
+  background-position:
+    left top, left top, right top, right top,
+    left bottom, left bottom, right bottom, right bottom;
+  background-repeat: no-repeat;
+}
+
+/* ==========================================================================
+   点缀层 v2 —— 填补卡片外圈与面板边缘空白，强化 HUD 科幻观感
+   --------------------------------------------------------------------------
+   原则：全部由伪元素 / background 图层实现，不新增 DOM、不改任何 padding-margin，
+        因此布局与既有断言不受影响。
+   ========================================================================== */
+
+/* 统一定位基准（伪元素需要） */
+.wv-hdr, .wv-panel, .wv-sect, .wv-talent-panel, .wv-rating, .wv-notes,
+.wv-stat-row, .wv-relic, .wv-rscore, .wv-affix, .wv-subrow, .wv-wpn-icon-wrap,
+.wv-sec-head, .wv-sec-head .wv-line, .wv-hud-blocks { position: relative; }
+
+/* ---- 1. 整卡外圈：描边 + 四角双层括号 + 角尖节点 + 上下刻度带（最终版加密） ----
+   括号 40px 主层（上金下蓝）+ 22px 内回声层（双层纵深）；四角 5px 方块节点压在边框上；
+   刻度带 320px。全部走 background 图层，不动 DOM */
+.wv::before {
+  content: ''; position: absolute; inset: 4px; z-index: 2; pointer-events: none;
+  /* 圆角必须小于括号内缩量，否则括号会被圆角裁掉 */
+  border-radius: 4px;
+  border: 1px solid rgba(140, 178, 230, .30);
+  box-shadow: inset 0 0 34px rgba(70, 120, 210, .18);
+  background-image:
+    linear-gradient(rgba(240, 215, 154, .95), rgba(240, 215, 154, .95)),
+    linear-gradient(rgba(240, 215, 154, .95), rgba(240, 215, 154, .95)),
+    linear-gradient(rgba(240, 215, 154, .95), rgba(240, 215, 154, .95)),
+    linear-gradient(rgba(240, 215, 154, .95), rgba(240, 215, 154, .95)),
+    linear-gradient(rgba(140, 178, 230, .70), rgba(140, 178, 230, .70)),
+    linear-gradient(rgba(140, 178, 230, .70), rgba(140, 178, 230, .70)),
+    linear-gradient(rgba(140, 178, 230, .70), rgba(140, 178, 230, .70)),
+    linear-gradient(rgba(140, 178, 230, .70), rgba(140, 178, 230, .70)),
+    linear-gradient(rgba(240, 215, 154, .34), rgba(240, 215, 154, .34)),
+    linear-gradient(rgba(240, 215, 154, .34), rgba(240, 215, 154, .34)),
+    linear-gradient(rgba(140, 178, 230, .34), rgba(140, 178, 230, .34)),
+    linear-gradient(rgba(140, 178, 230, .34), rgba(140, 178, 230, .34)),
+    linear-gradient(rgba(240, 215, 154, .95), rgba(240, 215, 154, .95)),
+    linear-gradient(rgba(240, 215, 154, .95), rgba(240, 215, 154, .95)),
+    linear-gradient(rgba(140, 178, 230, .70), rgba(140, 178, 230, .70)),
+    linear-gradient(rgba(140, 178, 230, .70), rgba(140, 178, 230, .70)),
+    repeating-linear-gradient(90deg, rgba(233, 207, 142, .30) 0 1px, rgba(233, 207, 142, 0) 1px 7px),
+    repeating-linear-gradient(90deg, rgba(140, 178, 230, .28) 0 1px, rgba(140, 178, 230, 0) 1px 7px);
+  background-size:
+    40px 1.5px, 1.5px 40px, 40px 1.5px, 1.5px 40px,
+    40px 1.5px, 1.5px 40px, 40px 1.5px, 1.5px 40px,
+    22px 1px, 1px 22px, 22px 1px, 1px 22px,
+    5px 5px, 5px 5px, 5px 5px, 5px 5px,
+    320px 6px, 320px 6px;
+  background-position:
+    left 6px top 6px, left 6px top 6px, right 6px top 6px, right 6px top 6px,
+    left 6px bottom 6px, left 6px bottom 6px, right 6px bottom 6px, right 6px bottom 6px,
+    left 13px top 13px, left 13px top 13px, right 13px bottom 13px, right 13px bottom 13px,
+    left 2px top 2px, right 2px top 2px, left 2px bottom 2px, right 2px bottom 2px,
+    center top, center bottom;
+  background-repeat: no-repeat;
+}
+
+/* ---- 2. 全卡：斜向网格肌理 + 左右边缘垂直刻度尺 ---- */
+.wv::after {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(52deg, rgba(140, 178, 230, .05) 0 1px, rgba(140, 178, 230, 0) 1px 22px),
+    repeating-linear-gradient(-52deg, rgba(140, 178, 230, .04) 0 1px, rgba(140, 178, 230, 0) 1px 22px),
+    repeating-linear-gradient(180deg, rgba(233, 207, 142, .62) 0 1px, rgba(233, 207, 142, 0) 1px 8px),
+    repeating-linear-gradient(180deg, rgba(233, 207, 142, .62) 0 1px, rgba(233, 207, 142, 0) 1px 8px);
+  background-size: auto, auto, 3px 42%, 3px 42%;
+  background-position: 0 0, 0 0, 3px 0, right 3px bottom 0;
+  background-repeat: repeat, repeat, no-repeat, no-repeat;
+}
+
+/* ---- 3. 头部信息条：底边渐隐金线 + 左上/右上两组刻度 ---- */
+.wv-hdr::after {
+  content: ''; position: absolute; inset: 0; border-radius: 14px; pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(233, 207, 142, .45), rgba(140, 178, 230, .18) 45%, rgba(140, 178, 230, 0)),
+    repeating-linear-gradient(90deg, rgba(233, 207, 142, .40) 0 1px, rgba(233, 207, 142, 0) 1px 5px),
+    repeating-linear-gradient(90deg, rgba(140, 178, 230, .34) 0 1px, rgba(140, 178, 230, 0) 1px 5px);
+  background-size: auto 1px, 46px 5px, 46px 5px;
+  background-position: 12px bottom, right 10px top 5px, left 10px top 5px;
+  background-repeat: no-repeat;
+}
+
+/* ---- 4. 面板 / 分区：底边渐隐高光线 + 顶部两侧斜纹装饰带 ----
+   注意 ::before 是第一个子盒，绘制在父背景之上、内容之下，所以可以安全地铺满整块 */
+.wv-panel::before, .wv-sect::before, .wv-talent-panel::before, .wv-rating::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(140, 178, 230, 0), rgba(160, 200, 255, .30), rgba(140, 178, 230, 0)),
+    repeating-linear-gradient(45deg, rgba(233, 207, 142, .22) 0 1px, rgba(233, 207, 142, 0) 1px 6px),
+    repeating-linear-gradient(-45deg, rgba(140, 178, 230, .22) 0 1px, rgba(140, 178, 230, 0) 1px 6px);
+  background-size: auto 1px, 96px 6px, 96px 6px;
+  background-position: 10px bottom, left 10px top, right 10px top;
+  background-repeat: no-repeat;
+}
+
+/* ---- 5. 分区标题：右上角点阵 + 装饰线端部小刻度 ---- */
+.wv-sec-head::after {
+  content: ''; position: absolute; right: 0; top: -9px; width: 30px; height: 6px; pointer-events: none;
+  background-image: radial-gradient(circle, rgba(140, 178, 230, .42) 1px, rgba(140, 178, 230, 0) 1.5px);
+  background-size: 5px 6px;
+}
+.wv-sec-head .wv-line::after {
+  content: ''; position: absolute; top: -2px; width: 1px; height: 5px;
+  background: rgba(233, 207, 142, .48);
+}
+.wv-sec-head .wv-line.wv-l::after { right: 0; }
+.wv-sec-head .wv-line.wv-r::after { left: 0; }
+
+/* ---- 6. 属性行：左侧刻度短标 ---- */
+.wv-stat-row::before {
+  content: ''; position: absolute; left: -1px; top: 50%; margin-top: -6px;
+  width: 2px; height: 12px; border-radius: 0 2px 2px 0; pointer-events: none;
+  background: rgba(140, 178, 230, .46);
+}
+.wv-stat-row.wv-alt::before { background: rgba(233, 207, 142, .58); }
+
+/* ---- 7. 评分环：外圈虚线环（与内圈刻度环呼应） ---- */
+.wv-rating-ring::before {
+  content: ''; position: absolute; inset: -10px; border-radius: 50%; pointer-events: none;
+  border: 1px dashed rgba(233, 207, 142, .24);
+}
+
+/* ---- 8. 小卡（圣遗物 / 词条 / 评分）：四角括号 + 沿边渐细刻度尺（第 18 轮加密） ----
+   括号之后沿两条边各延伸 2 根渐细渐淡的刻度（5px→4px，.26→.16），
+   形成黄铜"游标卡尺"收尾；只占边框 8px 内的框带，不与内容冲突 */
+.wv-relic::before, .wv-affix::before, .wv-rscore::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(233, 207, 142, .48), rgba(233, 207, 142, .48)),
+    linear-gradient(rgba(233, 207, 142, .48), rgba(233, 207, 142, .48)),
+    linear-gradient(rgba(140, 178, 230, .48), rgba(140, 178, 230, .48)),
+    linear-gradient(rgba(140, 178, 230, .48), rgba(140, 178, 230, .48)),
+    linear-gradient(rgba(233, 207, 142, .26), rgba(233, 207, 142, .26)),
+    linear-gradient(rgba(233, 207, 142, .16), rgba(233, 207, 142, .16)),
+    linear-gradient(rgba(233, 207, 142, .26), rgba(233, 207, 142, .26)),
+    linear-gradient(rgba(233, 207, 142, .16), rgba(233, 207, 142, .16)),
+    linear-gradient(rgba(140, 178, 230, .26), rgba(140, 178, 230, .26)),
+    linear-gradient(rgba(140, 178, 230, .16), rgba(140, 178, 230, .16)),
+    linear-gradient(rgba(140, 178, 230, .26), rgba(140, 178, 230, .26)),
+    linear-gradient(rgba(140, 178, 230, .16), rgba(140, 178, 230, .16));
+  background-size:
+    10px 1.5px, 1.5px 10px, 10px 1.5px, 1.5px 10px,
+    5px 1.5px, 4px 1.5px, 1.5px 5px, 1.5px 4px,
+    5px 1.5px, 4px 1.5px, 1.5px 5px, 1.5px 4px;
+  background-position:
+    left 5px top 5px, left 5px top 5px, right 5px bottom 5px, right 5px bottom 5px,
+    left 17px top 5px, left 24px top 5px, left 5px top 17px, left 5px top 24px,
+    right 17px bottom 5px, right 24px bottom 5px, right 5px bottom 17px, right 5px bottom 24px;
+  background-repeat: no-repeat;
+}
+
+/* ---- 9. 底部 HUD 分段条：中央菱形 ---- */
+.wv-hud-blocks::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px;
+  margin: -3px 0 0 -3px; transform: rotate(45deg); pointer-events: none;
+  background: linear-gradient(180deg, #F0D79A, #B8912B);
+  box-shadow: 0 0 8px rgba(233, 207, 142, .75), 0 0 0 3px rgba(6, 12, 24, .85);
+}
+
+/* ---- 10. 武器图标：内虚线环 + 外四角括号（两层装饰，拉开层次） ---- */
+.wv-wpn-icon-wrap::before {
+  content: ''; position: absolute; inset: -6px; border-radius: 18px; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)),
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)),
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9)),
+    linear-gradient(rgba(240, 215, 154, .9), rgba(240, 215, 154, .9));
+  background-size: 13px 1.5px, 1.5px 13px, 13px 1.5px, 1.5px 13px;
+  background-position: left top, left top, right bottom, right bottom;
+  background-repeat: no-repeat;
+}
+
+/* ==========================================================================
+   点缀层 v3 —— 继续加密装饰密度
+   ========================================================================== */
+.wv-char-name, .wv-sec-head .wv-t, .wv-sec-head .wv-en, .wv-stat-head, .wv-table, .wv-subrow { position: relative; }
+
+/* ---- 11. 角色名下方渐隐金线 ---- */
+.wv-char-name::after {
+  content: ''; position: absolute; left: 0; right: -10px; bottom: -1px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(233, 207, 142, .55), rgba(233, 207, 142, 0));
+}
+
+/* ---- 12. 分区标题：文字下方渐隐短线 + 英文角标前置竖线 ---- */
+.wv-sec-head .wv-t::after {
+  content: ''; position: absolute; left: -3px; right: -3px; bottom: -4px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(233, 207, 142, 0), rgba(233, 207, 142, .7), rgba(233, 207, 142, 0));
+}
+.wv-sec-head .wv-en { padding-left: 7px; }
+.wv-sec-head .wv-en::before {
+  content: ''; position: absolute; left: 0; top: 50%; margin-top: -4px;
+  width: 1px; height: 8px; pointer-events: none;
+  background: rgba(233, 207, 142, .5);
+}
+
+/* ---- 13. 属性表头：下方加第二条渐隐线（双线分隔） ---- */
+.wv-stat-head::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(233, 207, 142, .45), rgba(233, 207, 142, 0) 62%);
+}
+
+/* ---- 14. 词条卡：左缘金色小标（有效=亮金粗标；无效=冷灰细标，顺带压暗四角括号） ---- */
+.wv-affix::after {
+  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px; pointer-events: none;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(180deg, rgba(233, 207, 142, .55), rgba(233, 207, 142, .12));
+}
+.wv-affix:not(.wv-off)::after {
+  width: 2.5px;
+  background: linear-gradient(180deg, rgba(240, 215, 154, .95), rgba(233, 207, 142, .3));
+}
+.wv-affix.wv-off::after {
+  width: 1.5px;
+  background: linear-gradient(180deg, rgba(140, 178, 230, .3), rgba(140, 178, 230, .06));
+}
+.wv-affix.wv-off::before { opacity: .32; }
+
+/* ---- 15. 圣遗物卡 / 评分卡：顶部按评级色渐隐色条（色值由模板以 --rl 传入） ---- */
+.wv-relic::after, .wv-rscore::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; pointer-events: none;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(90deg, var(--rl, rgba(233, 207, 142, .5)), rgba(233, 207, 142, 0) 72%);
+}
+
+/* ---- 16. 伤害表：每行右缘刻度（左缘竖条已有） ---- */
+.wv-tr::after {
+  content: ''; position: absolute; right: 0; top: 50%; margin-top: -4px;
+  width: 2px; height: 8px; pointer-events: none; border-radius: 2px 0 0 2px;
+  background: rgba(140, 178, 230, .30);
+}
+.wv-tr.wv-head::after { margin-top: -5px; height: 10px; background: rgba(233, 207, 142, .55); }
+.wv-tr.wv-total::after {
+  margin-top: -5px; height: 10px;
+  background: linear-gradient(180deg, #F0D79A, #B8912B);
+  box-shadow: 0 0 7px rgba(233, 207, 142, .55);
+}
+
+/* ---- 17. 伤害表外框四角括号 ---- */
+.wv-table::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: 10px;
+  background-image:
+    linear-gradient(rgba(233, 207, 142, .5), rgba(233, 207, 142, .5)),
+    linear-gradient(rgba(233, 207, 142, .5), rgba(233, 207, 142, .5)),
+    linear-gradient(rgba(140, 178, 230, .5), rgba(140, 178, 230, .5)),
+    linear-gradient(rgba(140, 178, 230, .5), rgba(140, 178, 230, .5));
+  background-size: 11px 1.5px, 1.5px 11px, 11px 1.5px, 1.5px 11px;
+  background-position: left top, left top, right bottom, right bottom;
+  background-repeat: no-repeat;
+}
+
+/* ---- 18. 副标行：两端刻度 ---- */
+.wv-subrow::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -5px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(140, 178, 230, .3), rgba(140, 178, 230, .05) 50%, rgba(140, 178, 230, .3));
+}
+
+/* ---- 19. 立绘卡：底部斜纹渐隐装饰带 ---- */
+.wv-art-card::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 34px; z-index: 2; pointer-events: none;
+  background: repeating-linear-gradient(45deg, rgba(240, 215, 154, .26) 0 1px, rgba(240, 215, 154, 0) 1px 6px);
+  -webkit-mask: linear-gradient(180deg, rgba(0, 0, 0, 0), #000);
+          mask: linear-gradient(180deg, rgba(0, 0, 0, 0), #000);
+}
+.wv-nameplate { z-index: 3; }
+
+/* ---- 20. 底部 HUD 条：疏密起伏 + 两端小方块 ---- */
+.wv-hud-blocks i:nth-child(odd) { height: 3px; }
+.wv-hud-blocks::after {
+  content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 4px; pointer-events: none;
+  background: linear-gradient(180deg, #F0D79A, #B8912B);
+  box-shadow: 4px 0 0 -1px rgba(233, 207, 142, .45), 0 0 7px rgba(233, 207, 142, .55);
+}

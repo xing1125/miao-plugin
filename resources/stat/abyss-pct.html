@@ -44,7 +44,7 @@
       <div class="card-list">
         {{each rank.avatars char}}
         <div class="item star{{char.star == 4? 4:5}}">
-          <img class="role" src="{{_res_path}}{{char.face}}"/>
+          <img class="role" src="{{_res_path}}{{char.face}}" onerror="this.style.visibility='hidden'"/>
           <div class="num_name">{{pct(char.value)}}%</div>
         </div>
         {{/each}}

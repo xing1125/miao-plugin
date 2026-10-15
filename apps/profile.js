@@ -23,13 +23,13 @@ app.reg({
 
   profileDetail: {
     name: '角色面板',
-    fn: ProfileDetail.detail,
+    fn: (...args) => ProfileDetail.detail(...args),
     rule: /^#*([^#]+)\s*(详细|详情|面板|面版|圣遗物|遗器|武器[1-7]?|伤害([1-9]+\d*)?)\s*(\d{9,10})*(.*[换].*)?$/
   },
 
   profileChange: {
     name: '角色面板计算',
-    fn: ProfileDetail.detail,
+    fn: (...args) => ProfileDetail.detail(...args),
     rule: /^#.+换.+$/
   },
 

@@ -84,6 +84,7 @@ let Avatar = {
       saveId: uid,
       uid,
       bg,
+      bodyClass: 'card-page',
       widthStyle: `<style>html,body,#container{width:${width}px} ${imgCss}</style>`,
       mode: bg.mode,
       custom,

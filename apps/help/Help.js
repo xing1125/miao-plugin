@@ -62,7 +62,8 @@ const Help = {
       helpCfg: helpConfig,
       helpGroup,
       ...themeData,
-      element: 'default'
+      element: 'default',
+      bodyClass: 'help-page'
     }, { e, scale: 1.2 })
   },
 
@@ -70,7 +71,8 @@ const Help = {
     return await Common.render('help/version-info', {
       currentVersion: Version.version,
       changelogs: Version.changelogs,
-      elem: 'cryo'
+      elem: 'cryo',
+      bodyClass: 'help-page'
     }, { e, scale: 1.2 })
   }
 }

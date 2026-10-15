@@ -1,0 +1,444 @@
+{{extend elemLayout}}
+
+{{block 'css'}}
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/character/profile-detail-wave.css"/>
+{{/block}}
+
+{{set ad = artisDetail }}
+{{set weapon = data.weapon }}
+{{set imgs = data.imgs || {} }}
+{{set card = charCard || {} }}
+{{set star = '<svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><path d="M6 0L7.53 3.9L11.71 4.15L8.47 6.8L9.53 10.85L6 8.6L2.47 10.85L3.53 6.8L0.29 4.15L4.47 3.9Z"/></svg>' }}
+{{set dia = '<svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><path d="M6 0L7.4 4.6L12 6L7.4 7.4L6 12L4.6 7.4L0 6L4.6 4.6Z" fill="#6E8CB0"/></svg>' }}
+
+{{block 'main'}}
+<div class="wv profile-cont" style="--wv-elem:{{card.elemColor}}">
+  <div class="wv-glow-warm"></div>
+  <div class="wv-glow-cool"></div>
+  <div class="wv-glow-elem"></div>
+  <div class="wv-rune"></div>
+
+  <!-- ============ 头部信息条 ============ -->
+  <div class="wv-hdr">
+    <img class="wv-avatar" src="{{_res_path}}{{imgs.face}}" alt="">
+    <div class="wv-hdr-main">
+      <div class="wv-char-name">{{data.name}}</div>
+      <div class="wv-hdr-sub">
+        <span class="wv-elem-ic">{{@card.elemIcon}}</span>
+        {{if card.elemLabel}}<span class="wv-tag">{{card.elemLabel}}</span>{{/if}}
+        {{if card.wpnIcon}}<span class="wv-wpn-ic"><img src="{{_res_path}}{{card.wpnIcon}}" alt=""></span>{{/if}}
+        {{if card.wpnName}}<span class="wv-tag">{{card.wpnName}}</span>{{/if}}
+        <span class="wv-chip">UID {{uid}}</span>
+      </div>
+    </div>
+    <div class="wv-spacer"></div>
+    <div class="wv-kv">
+      <div class="wv-k">
+        <svg class="wv-lv-ic" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#FFD98A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.6V3.8"/><path d="M4.3 7.5 8 3.8l3.7 3.7"/></svg>等级
+      </div>
+      <div class="wv-v">Lv.{{data.level}}</div>
+    </div>
+    <div class="wv-badge">
+      <img class="wv-game-logo" src="{{_res_path}}{{card.gameLogo}}" alt="">
+    </div>
+  </div>
+
+  <!-- ============ 命座轨迹 + 天赋 ============ -->
+  <div class="wv-talent-panel">
+    <div class="wv-cons-strip">
+      <span class="wv-cons-k">{{game === 'sr' ? '星魂' : '命之座'}}</span>
+      <span class="wv-cons-lv">{{card.consLabel}}</span>
+      <div class="wv-cons-nodes">
+        {{each card.consNodes n idx}}
+        {{if idx > 0}}<span class="wv-cl {{n.on && card.consNodes[idx-1].on ? 'on' : ''}}"></span>{{/if}}
+        <span class="wv-cn {{n.on ? 'on' : ''}}">{{if n.img}}<img src="{{_res_path}}{{n.img}}" alt="">{{else}}{{@star}}{{/if}}</span>
+        {{/each}}
+      </div>
+    </div>
+    <div class="wv-talent-row{{if card.talents.length > 4}} wv-dense{{/if}}">
+      {{each card.talents t}}
+      <div class="wv-tunit">
+        <div class="wv-ticon-wrap">
+          <!-- 图标与底色合并进 background-image：（1）图标层走 CSS 的 background-size 缩放，
+               （2）避免用 background 简写把 CSS 里的 background-size 重置成 auto，导致大图只露中心 -->
+          <div class="wv-ticon" style="background-image:url({{_res_path}}{{t.img}}),{{t.bg}};border:1px solid {{t.line}};box-shadow:0 0 13px {{t.glow}}"></div>
+          <span class="wv-tbadge" style="color:{{t.color}};border:1px solid {{t.line}}">{{t.level}}</span>
+        </div>
+        <div class="wv-tmeta">
+          <div class="wv-tname">{{t.name}}</div>
+          <div class="wv-tbar"><i style="width:{{t.pct}}%;background:{{t.line}}"></i></div>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+
+    {{if game === 'sr' && card.traces && card.traces.length}}
+    <!-- 星铁行迹条：属性点(成组) + 大行迹交替，点亮=金色，未点亮=压灰 -->
+    <div class="wv-trace-row">
+      {{each card.traces tg}}
+      <div class="wv-trace-g{{tg.major ? ' wv-major' : ''}}">
+        {{each tg.icons ic}}
+        <span class="wv-trace {{ic.on ? 'on' : ''}}" style="background-image:url({{_res_path}}{{ic.img}})"></span>
+        {{/each}}
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
+  </div>
+
+  <!-- ============ 主体：左栏立绘 / 右栏面板 ============ -->
+  <div class="wv-main">
+    <div class="wv-col-l">
+      <div class="wv-art-card">
+        <img src="{{_res_path}}{{card.art}}" alt="">
+        <i class="wv-art-fade"></i>
+        <div class="wv-nameplate">{{data.name}}</div>
+      </div>
+      <div class="wv-rating">
+        <div class="wv-rating-ring {{card.rs.gradeCls}}">
+          <svg viewBox="0 0 76 76" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ratingGrad" gradientUnits="userSpaceOnUse" x1="30" y1="6" x2="46" y2="70">
+                <stop offset="0%" stop-color="{{card.ringStops[0]}}"/>
+                <stop offset="36%" stop-color="{{card.ringStops[1]}}"/>
+                <stop offset="100%" stop-color="{{card.ringStops[2]}}"/>
+              </linearGradient>
+            </defs>
+            <circle cx="38" cy="38" r="31" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"/>
+            <circle cx="38" cy="38" r="31" fill="none" stroke="url(#ratingGrad)" stroke-width="5"
+                    stroke-linecap="round" pathLength="100"
+                    stroke-dasharray="{{card.scorePct}} {{100 - card.scorePct}}"
+                    stroke-dashoffset="{{card.scorePct / 2 - 125}}"/>
+          </svg>
+          <!-- 评级字与 class 都取 card.rs，别用 ad.markClass：
+               两个来源一旦不同步就会出现「MAX 的 class + ACE 的字」 -->
+          <div class="wv-grade {{card.rs.gradeCls}}">{{card.rs.grade}}</div>
+        </div>
+        <div class="wv-rating-num">
+          <div class="wv-n">{{ad.mark}}</div>
+          <div class="wv-l">角色练度评级</div>
+          <div class="wv-m">{{card.artisName}} {{card.relicCount}} · 词条 {{card.effSum}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wv-col-r">
+      <!-- 属性面板 -->
+      <div class="wv-panel">
+        <div class="wv-sec-head wv-pb">
+          <span class="wv-no">01</span>
+          <span class="wv-line wv-l"></span>
+          <span class="wv-dia">{{@dia}}</span>
+          <span class="wv-t">属性</span>
+          <span class="wv-dia">{{@dia}}</span>
+          <span class="wv-line wv-r"></span>
+          <span class="wv-en">ATTR</span>
+        </div>
+        <div class="wv-stat-head">
+          <span class="wv-nm">属性</span><span class="wv-b">基础</span><span class="wv-a">加成</span><span class="wv-v2">合计</span>
+        </div>
+        {{each card.stats s idx}}
+        <div class="wv-stat-row {{idx % 2 === 1 ? 'wv-alt' : ''}}">
+          <span class="wv-ic"><i class="i-{{s.key}}"></i></span>
+          <span class="wv-nm">{{s.name}}</span>
+          <span class="wv-b {{s.base === '0.0%' || s.base === '0.0' ? 'wv-zero' : ''}}">{{s.base}}</span>
+          <span class="wv-a">{{s.plus}}</span>
+          <span class="wv-v2">{{s.total}}</span>
+        </div>
+        {{/each}}
+      </div>
+
+      {{if weapon && weapon.name}}
+      <!-- 武器面板 -->
+      <div class="wv-panel wv-wpn">
+        <div class="wv-sec-head">
+          <span class="wv-no">02</span>
+          <span class="wv-line wv-l"></span>
+          <span class="wv-dia">{{@dia}}</span>
+          <span class="wv-t">武器信息</span>
+          <span class="wv-dia">{{@dia}}</span>
+          <span class="wv-line wv-r"></span>
+          <span class="wv-en">WPN</span>
+        </div>
+        <div class="wv-wpn-row">
+          <div class="wv-wpn-icon-wrap {{weapon.star >= 5 ? 'wv-r5' : ''}}">
+            <img class="wv-wpn-icon" src="{{_res_path}}{{weapon.img}}" alt="">
+            <span class="wv-wpn-lv">Lv.{{weapon.level}}{{if card.wpnMaxLv}}/{{card.wpnMaxLv}}{{/if}}</span>
+          </div>
+          <div class="wv-wpn-txt">
+            <div class="wv-wpn-name">{{weapon.sName || weapon.name}}</div>
+            <div class="wv-wpn-stars">
+              <svg viewBox="0 0 {{weapon.star * 12.5}} 12" style="height:13px;width:{{weapon.star * 13.54}}px" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {{each card.wpnStars i}}<path transform="translate({{i * 12.5}} 0)" d="M6 0L7.53 3.9L11.71 4.15L8.47 6.8L9.53 10.85L6 8.6L2.47 10.85L3.53 6.8L0.29 4.15L4.47 3.9Z" fill="#F0D79A"/>{{/each}}
+              </svg>
+            </div>
+            <div class="wv-wpn-tags">
+              <span class="wv-chip">{{game === 'sr' ? '叠影' : '精炼'}} {{weapon.affix}}{{if card.wpnMaxAffix}}/{{card.wpnMaxAffix}}{{/if}} 阶</span>
+              {{if card.wpnType}}<span class="wv-chip wv-gray">{{card.wpnType}}</span>{{/if}}
+            </div>
+          </div>
+          <div class="wv-wpn-stats">
+            {{each card.wpnStats ws}}
+            <div class="wv-r"><span class="wv-k">{{ws.k}}</span><span class="wv-v">{{ws.v}}</span></div>
+            {{/each}}
+          </div>
+        </div>
+        {{if card.wpnAffixTitle}}
+        <div class="wv-wpn-affix-title">{{card.wpnAffixTitle}}</div>
+        {{/if}}
+        {{if weapon.desc?.desc}}
+        <div class="wv-wpn-desc">{{@weapon.desc.desc}}</div>
+        {{/if}}
+      </div>
+      {{/if}}
+    </div>
+  </div>
+
+  <!-- ============ 圣遗物信息 ============ -->
+  <div class="wv-sect">
+    <div class="wv-sec-head">
+      <span class="wv-no">03</span>
+      <span class="wv-line wv-l"></span>
+      <span class="wv-dia">{{@dia}}</span>
+      <span class="wv-t">{{card.artisName}}信息</span>
+      <span class="wv-dia">{{@dia}}</span>
+      <span class="wv-line wv-r"></span>
+      <span class="wv-en">RELIC</span>
+    </div>
+    <div class="wv-hr-orn"><i></i><b></b><i></i></div>
+
+    <div class="wv-subrow">
+      <span class="wv-set">{{card.relicSet}}</span>
+      {{if card.showUseful}}
+      <span class="wv-uf">
+        <span class="wv-uf-k">有效词条</span>
+        <span class="wv-uf-v">{{card.usefulEff}}<i>条</i></span>
+        <span class="wv-uf-bar"><b style="width:{{card.usefulPct}}%"></b></span>
+      </span>
+      {{else}}
+      <span class="wv-hint">词条数 = 副词条等效条数</span>
+      {{/if}}
+    </div>
+
+    <div class="wv-affix-grid{{if !card.showUseful}} wv-plain{{/if}}" style="grid-template-columns:repeat({{card.affixCols}},1fr)">
+      {{each card.affixes af}}
+      <div class="wv-affix{{if !af.useful}} wv-off{{/if}}">
+        <span class="wv-n">{{af.n}}</span><span class="wv-k">{{af.k}}</span><span class="wv-v">{{af.v}}</span>
+      </div>
+      {{/each}}
+    </div>
+
+    <div class="wv-relic-grid">
+      <!-- 第 1 格：圣遗物评分（--rl 供顶部的评级色渐隐条使用）。
+           仅原神渲染：星铁遗器 6 件正好占满 3×2 网格，且用户拍板星铁不需要评分模块 -->
+      {{if game === 'gs'}}
+      <div class="wv-rscore {{card.rs.gradeCls}}" style="--rl:{{card.rs.gradeColor}}">
+        <div class="wv-rscore-head">
+          <span class="wv-dm">{{@star}}</span>
+          <span class="wv-rscore-title">圣遗物评分</span>
+          <span class="wv-g {{card.rs.gradeCls}}" style="color:{{card.rs.gradeColor}};background:{{card.rs.gradeBg}}">{{card.rs.grade}}</span>
+        </div>
+        <div class="wv-rscore-avg">平均 <b>{{card.rs.avg}}</b><span class="wv-mx">/{{card.rs.max}}</span></div>
+        <div class="wv-rscore-bar">
+          <i style="width:{{card.rs.avgPct}}%"></i>
+          <span class="wv-tk" style="left:25%"></span><span class="wv-tk" style="left:50%"></span><span class="wv-tk" style="left:75%"></span>
+        </div>
+        <div class="wv-rscore-parts">
+          {{each card.rs.parts p}}
+          <div class="wv-rpart">
+            <span class="wv-s">{{p.name}}</span>
+            <span class="wv-pb"><i class="{{p.cls}}" style="width:{{p.pct}}%;background:{{p.color}}"></i></span>
+            <span class="wv-n {{p.cls}}" style="color:{{p.color}}">{{p.score}}</span>
+          </div>
+          {{/each}}
+        </div>
+        <div class="wv-rscore-div"></div>
+        <div class="wv-rscore-metrics">
+          {{each card.rs.metrics m}}
+          <span class="wv-m"><span class="wv-k">{{m.k}}</span><span class="wv-v">{{m.v}}</span></span>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      <!-- 圣遗物卡（老版同款层级）：顶部图标 + 名称/「得分 - 等级」+ 分隔线，
+           词条行做成「交替格子 + 行分隔线」，左列等效词条数芯片 + 老版 up-num 强化箭头 -->
+      {{each card.relics rl}}
+      <div class="wv-relic {{rl.gradeCls}}" style="--rl:{{rl.gradeColor}}">
+        <img class="wv-relic-icon" src="{{_res_path}}{{rl.icon}}" alt="">
+        <div class="wv-relic-head">
+          <div class="wv-relic-name">{{rl.name}}</div>
+          <div class="wv-relic-score">
+            <span class="wv-snum {{rl.gradeCls}}" style="color:{{rl.gradeColor}}">{{rl.scoreNum}}分</span>
+            <span class="wv-sdash">-</span>
+            <span class="wv-g {{rl.gradeCls}}" style="color:{{rl.gradeColor}}">{{rl.grade}}</span>
+            {{if rl.level != null && rl.level !== ''}}<span class="wv-relic-lv">+{{rl.level}}</span>{{/if}}
+          </div>
+        </div>
+        <div class="wv-relic-div"></div>
+        <ul class="wv-relic-list">
+          <li class="wv-r-main">
+            <span class="wv-k">{{rl.mainLabel}}</span>
+            <span class="wv-v">{{rl.mainValue}}</span>
+          </li>
+          {{each rl.subs sb}}
+          <li class="wv-r-sub {{sb.useful ? 'wv-on' : 'wv-off'}}">
+            {{if sb.eq}}<i class="wv-eq">{{sb.eq}}</i>{{/if}}
+            <span class="wv-k">{{sb.name}}</span>
+            {{if sb.upCls}}<i class="wv-up {{sb.upCls}}"></i>{{/if}}
+            <span class="wv-v">{{sb.value}}</span>
+          </li>
+          {{/each}}
+        </ul>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <!-- ============ 伤害计算 ============ -->
+  {{if dmgCalc?.dmgData?.length > 0}}
+  <div class="wv-sect">
+    <div class="wv-sec-head">
+      <span class="wv-no">04</span>
+      <span class="wv-line wv-l"></span>
+      <span class="wv-dia">{{@dia}}</span>
+      <span class="wv-t">伤害计算</span>
+      <span class="wv-dia">{{@dia}}</span>
+      <span class="wv-line wv-r"></span>
+      <span class="wv-en">DMG</span>
+    </div>
+    <div class="wv-hr-orn"><i></i><b></b><i></i></div>
+
+    <div class="wv-subrow">
+      <span class="wv-hint">敌人 {{card.enemyLv}} 级 · {{card.enemyName}}</span>
+      <span class="wv-hint">{{gameHash}}{{data.abbr}}伤害 命令可查看详情</span>
+    </div>
+
+    <div class="wv-table">
+      <div class="wv-tr wv-head"><span class="wv-c0">伤害类型</span><span class="wv-c1">暴击伤害</span><span class="wv-c2">期望伤害</span></div>
+      {{each dmgCalc.dmgData dg idx}}
+      <div class="wv-tr {{idx % 2 === 1 ? 'wv-even' : 'wv-odd'}}">
+        <span class="wv-c0">{{dg.title}}</span>
+        {{if !dg.dmg || dg.dmg === "NaN"}}
+        <span class="wv-c1">{{dg.avg}}{{dg.unit}}<i class="wv-diff">{{dg.avg_diff || ''}}</i></span>
+        <span class="wv-c2"></span>
+        {{else}}
+        <span class="wv-c1">{{dg.dmg}}{{dg.unit}}<i class="wv-diff">{{dg.dmg_diff || ''}}</i></span>
+        <span class="wv-c2">{{dg.avg}}{{dg.unit}}<i class="wv-diff">{{dg.avg_diff || ''}}</i></span>
+        {{/if}}
+      </div>
+      {{/each}}
+      {{if card.dmgTotal}}
+      <div class="wv-tr wv-total"><span class="wv-c0">总计</span><span class="wv-c1">{{card.dmgTotal.dmg}}</span><span class="wv-c2">{{card.dmgTotal.avg}}</span></div>
+      {{/if}}
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- ============ 排名统计 ============ -->
+  {{if dmgRankData || artisRankData}}
+  <div class="wv-sect wv-rank">
+    <div class="wv-sec-head">
+      <span class="wv-no">05</span>
+      <span class="wv-line wv-l"></span>
+      <span class="wv-dia">{{@dia}}</span>
+      <span class="wv-t">排名统计</span>
+      <span class="wv-dia">{{@dia}}</span>
+      <span class="wv-line wv-r"></span>
+      <span class="wv-en">RANK</span>
+    </div>
+    <div class="wv-hr-orn"><i></i><b></b><i></i></div>
+    <div class="wv-subrow">
+      <span class="wv-hint">使用 {{gameHash}}{{data.abbr}}排名统计 命令可查看排名统计详情</span>
+    </div>
+    <div class="wv-rank-grid">
+      <div class="wv-rank-cell">
+        {{if dmgRankData}}
+        <div class="wv-chart" id="wvDamageChart"></div>
+        {{else}}
+        <div class="wv-no-data">暂无数据</div>
+        {{/if}}
+        <div class="wv-rank-label">伤害排名</div>
+        {{if scoreAndRank[0]}}<div class="wv-rank-sub">{{scoreAndRank[0]}}</div>{{/if}}
+      </div>
+      <div class="wv-rank-cell">
+        {{if artisRankData}}
+        <div class="wv-chart" id="wvArtisChart"></div>
+        {{else}}
+        <div class="wv-no-data">暂无数据</div>
+        {{/if}}
+        <div class="wv-rank-label">圣遗物排名</div>
+        {{if scoreAndRank[1]}}<div class="wv-rank-sub">{{scoreAndRank[1]}}</div>{{/if}}
+      </div>
+    </div>
+  </div>
+
+  <script src="../../../../../plugins/ark-plugin/resources/graph/echarts.min.js"></script>
+  <script>
+  (function () {
+    var self = [{{@selfRank}}];
+    function draw(id, rawArr, firstVal, selfIdx, isDmg) {
+      var el = document.getElementById(id);
+      if (!el || !rawArr || !rawArr.length) return;
+      var myChart = echarts.init(el, null, { renderer: 'svg' });
+      var ranks = [100, 99, 95, 90, 80, 70, 50, 30, 10, 5, 1, 0];
+      var rankData_ = [firstVal].concat(rawArr, [0]);
+      var rankData = Array.from({ length: 101 }, function (_, i) {
+        var p = ranks.indexOf(i);
+        return p >= 0 ? rankData_[p] : null;
+      });
+      var target = self[selfIdx] || 0;
+      var targetScore = isDmg
+        ? (self[selfIdx + 1] || 0).toFixed(2)
+        : ((self[selfIdx + 1] || 0) * firstVal / 100).toFixed(2);
+      var maxY = isDmg ? 100 : (parseInt(firstVal, 10) / 50 * 50);
+      var option = {
+        animation: false,
+        grid: { left: 4, right: 4, top: 12, bottom: 16 },
+        xAxis: { type: 'value', min: 0, max: 100, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } },
+        yAxis: { type: 'value', min: 0, max: maxY, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } },
+        series: [{
+          data: rankData.map(function (v, i) { return [i, v === null ? null : v]; }),
+          type: 'line', showSymbol: false, smooth: true, connectNulls: true,
+          lineStyle: { color: '#33CCCC', width: 2 },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+              { offset: 0, color: 'rgba(51,204,204,.42)' },
+              { offset: (100 - target) / 100, color: 'rgba(51,204,204,.42)' },
+              { offset: (100 - target - 2.5) / 100, color: 'rgba(255,77,79,.55)' },
+              { offset: (100 - target + 2.5) / 100, color: 'rgba(255,77,79,.55)' },
+              { offset: (100 - target + 2.5) / 100, color: 'rgba(51,204,204,.42)' },
+              { offset: 1, color: 'rgba(51,204,204,.42)' }
+            ])
+          },
+          markPoint: {
+            symbol: 'circle', symbolSize: 0,
+            label: { show: true, position: 'top', offset: [0, -2], formatter: '' + targetScore, fontSize: 17, fontWeight: 'bold', color: '#fff', backgroundColor: 'rgba(8,16,30,.82)', padding: [2, 5], borderRadius: 4 },
+            data: [{ coord: [100 - target, parseFloat(targetScore)], itemStyle: { color: 'transparent' } }]
+          }
+        }]
+      };
+      myChart.setOption(option);
+    }
+    draw('wvDamageChart', [{{@dmgRankData}}], 100, 0, true);
+    draw('wvArtisChart', [{{@artisRankData}}], {{top1 || 0}}, 2, false);
+  })();
+  </script>
+  {{/if}}
+
+  {{if changeProfile}}
+  <div class="wv-notes">
+    <p><span class="wv-bl"></span><span>该面板为非实际数据。当前替换命令：{{changeProfile}}</span></p>
+  </div>
+  {{/if}}
+
+  <!-- ============ 说明 ============ -->
+  <div class="wv-notes">
+    {{each card.notes n}}
+    <p><span class="wv-bl"></span><span class="wv-nt">{{each n.segs s}}<span class="{{s.cls}}">{{s.t}}</span>{{/each}}</span></p>
+    {{/each}}
+  </div>
+
+  <div class="wv-hud-blocks"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+{{/block}}

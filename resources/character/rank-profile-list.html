@@ -149,6 +149,15 @@
       {{else}}
       {{/if}}
     </div>
+    {{if !noRankFlag}}
+    <div class="char-dmg line" style="width: 150px;">
+      {{if ds.dmg}}
+      <div class="dmg-title">{{ds.dmg?.rankName}}</div>
+      <div class="dmg-value">{{ds.dmg?.totalrank}}</div>
+      {{else}}
+      {{/if}}
+    </div>
+    {{/if}}
   </div>
   {{/each}}
 </div>
