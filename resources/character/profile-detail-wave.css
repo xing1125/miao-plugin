@@ -525,7 +525,7 @@ body, .container { width: 600px; padding: 0; margin: 0; }
 /* 副标行右侧：有效词条计数 + 细进度条（权重表缺失时模板不渲染，改显示 wv-hint） */
 .wv-subrow .wv-uf { display: inline-flex; align-items: center; gap: 6px; }
 .wv-subrow .wv-uf-k { font-size: 11px; letter-spacing: .5px; color: var(--wv-t6); }
-.wv-subrow .wv-uf-v { font-size: 12.5px; font-weight: 700; color: var(--wv-gold-b); font-variant-numeric: tabular-nums; }
+.wv-subrow .wv-uf-v { font-size: 12.5px; font-weight: 700; color: #FFC24A; font-variant-numeric: tabular-nums; }
 .wv-subrow .wv-uf-v i { font-style: normal; font-size: 11px; font-weight: 500; color: var(--wv-t6); }
 .wv-subrow .wv-uf-bar {
   display: inline-block; width: 54px; height: 3px; border-radius: 2px;
@@ -606,23 +606,29 @@ body, .container { width: 600px; padding: 0; margin: 0; }
    有效项：金缘 + 微金底 + 内发光，数值维持绿色，作为视觉主角。
    无效项：整体压哑（降透明度 + 去金去绿），但仍保持可读，避免词条区显得"破洞"。 */
 .wv-affix:not(.wv-off) {
-  /* 有效态 = 镀金 + 抬起：金比分更重、内金晕更强、外圈透一点金光 */
+  /* 有效态 = 镀金 + 抬起：金比分更重、内金晕更强、外圈透一点金光。
+     第 38 轮：金色从"浅香槟"(233,207,142) 换为饱和琥珀(255,183,64)。
+     用户反馈"有效词条色太浅"——根因是原金色饱和度极低，压在深蓝底上被稀释成灰调、发白。 */
   background-color: var(--wv-tile-bg);
-  background-image: var(--wv-noise), linear-gradient(180deg, rgba(233, 207, 142, .20), rgba(233, 207, 142, .04) 45%, rgba(2, 6, 16, .14));
+  background-image: var(--wv-noise), linear-gradient(180deg, rgba(255, 183, 64, .18), rgba(255, 183, 64, .03) 45%, rgba(2, 6, 16, .16));
   background-size: 160px 160px, 100% 100%;
-  border-color: rgba(233, 207, 142, .55);
+  border-color: rgba(255, 196, 84, .62);
   /* 本规则(2 class)会盖掉 L3 的基础落影，必须把立体三件套一起带下来：
      金色内晕 + 内上高光 + 内下暗边 + 外落影 + 磨砂内漫射 */
   box-shadow:
-    inset 0 0 15px rgba(233, 207, 142, .16),
+    inset 0 0 15px rgba(255, 190, 70, .17),
     inset 0 0 22px -10px rgba(140, 178, 230, .13),
     inset 0 1px 0 rgba(255, 255, 255, .22),
     inset 0 -1px 0 rgba(3, 8, 18, .44),
-    0 3px 9px -3px rgba(0, 0, 0, .58),
-    0 1px 2px -1px rgba(0, 0, 0, .40),
-    0 0 11px rgba(233, 207, 142, .10);
+    0 5px 14px -4px rgba(0, 0, 0, .68),
+    0 2px 4px -1px rgba(0, 0, 0, .46),
+    0 0 12px rgba(255, 183, 64, .13);
 }
 .wv-affix:not(.wv-off) .wv-k { color: var(--wv-t2); }
+/* 等效词条数 / 数值：原 --wv-gold-b(#FFE6A8) 与 --wv-green(#7DF5AE) 明度高、饱和低 → 发白。
+   改用饱和琥珀金 / 翠绿（深底实测 4.7:1、4.5:1，仍达标） */
+.wv-affix:not(.wv-off) .wv-n { color: #FFC24A; }
+.wv-affix:not(.wv-off) .wv-v { color: #3FE39A; }
 
 /* 无效项：语义是「沉下去」，不是「看不清」。
    ⚠ 关键：无效态过去会**继承 L3 那套玻璃三件套**（白棱边 + 顶部透光 + 外落影），
