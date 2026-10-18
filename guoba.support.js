@@ -1,25 +1,38 @@
 /**
  * miao-plugin 锅巴（Guoba）配置面板适配
  *
- * 【设计说明】
- * - 遵循 config/system 目录的约定，不修改任何系统配置文件；
- *   config/system/cfg_system.js 中的 cfgSchema 仅以只读方式引用，
- *   Guoba 专属的控件配置统一定义在本文件的 componentOverrides 中。
- * - 面板保存通过 Cfg.set() 写入，与 #喵喵设置 命令同路径：
- *   同时更新内存配置并重新生成 config/cfg.js，保存后实时生效，无需重启Yunzai。
- * - schema 中 miao: true 的项在喵喵系Yunzai核心（TRSS-Yunzai / miao-yunzai / A-Yunzai）下
- *   由 Cfg.get 强制返回 true，面板中对应开关置灰展示为始终开启。
- * - schema 由 cfgSchema 自动生成，上游新增配置项后无需修改本文件即可在面板展示。
+ * 【适配说明 · 面向 Guoba 2.1.0（V3）】
+ * - 契约：export supportGuoba() → { pluginInfo, configInfo:{ schemas, getConfigData, setConfigData } }
+ *   Guoba 通过 plugins/miao-plugin/guoba.support.js 动态 import 并调用，无需改任何系统文件。
+ * - schema 来源：优先用 miao 规范 API Cfg.getCfgSchema()（与 #喵喵设置 同源，上游新增配置自动出现），
+ *   取不到时回退静态导入 config/system/cfg_system.js。
+ * - 面板保存经 Cfg.set() 写入 config/cfg.js，与 #喵喵设置 同路径，实时生效、无需重启。
+ * - schema 中 miao:true 的项在喵喵系核心（TRSS/miao-yunzai/A-Yunzai）下由 Cfg.get 强制 true，
+ *   面板置灰展示为始终开启，且 setConfigData 拒绝修改。
  */
 import path from 'node:path'
 import lodash from 'lodash'
 import { fileURLToPath } from 'node:url'
 import { Cfg, Version } from '#miao'
-import { cfgSchema } from './config/system/cfg_system.js'
+import { cfgSchema as cfgSchemaFallback } from './config/system/cfg_system.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-/** 按 cfgKey 覆盖默认生成的控件（不修改 config/system 下的系统文件） */
+/** 取配置分组 schema：优先规范 API，失败回退静态表 */
+function getSchemaGroups () {
+  try {
+    const s = Cfg.getCfgSchema && Cfg.getCfgSchema()
+    if (s && typeof s === 'object' && Object.keys(s).length) return s
+  } catch (e) {
+    // 忽略，走回退
+  }
+  return cfgSchemaFallback
+}
+
+/**
+ * 按 cfgKey 覆盖默认生成的控件（不修改 config/system 下的系统文件）。
+ * 组件名遵循 Guoba 前端（ant-design-vue）：Switch / Input / InputNumber / Select。
+ */
 const componentOverrides = {
   // ---- 排名相关 ----
   groupRankLimit: {
@@ -38,31 +51,17 @@ const componentOverrides = {
     componentProps: { min: 5, max: 30, step: 1 }
   },
   // ---- 面板服务 ----
+  // 注意：不要用 Select。底层支持分服务器三位数（如 112），Select 无对应项会导致
+  // 显示空白、保存时被重置为 0（数据丢失）。用 Input 才能完整表达 0-4 与 112。
   profileServer: {
-    component: 'Select',
-    bottomHelpMessage: '面板服务选择：0:自动，1:喵Api(需具备Token)，2:Enka-API，3:MiniGG-Api，4:Hutao-Enka代理。如需分服务器设置（国服/B服/外服，如112），请使用【#喵喵设置面板服务112】命令',
-    componentProps: {
-      options: [
-        { label: '0 - 自动', value: '0' },
-        { label: '1 - 喵Api (需具备Token)', value: '1' },
-        { label: '2 - Enka-API', value: '2' },
-        { label: '3 - MiniGG-Api', value: '3' },
-        { label: '4 - Hutao-Enka代理', value: '4' }
-      ]
-    }
+    component: 'Input',
+    componentProps: { placeholder: '0-4，或分服务器三位数字，例如 112' },
+    bottomHelpMessage: '面板服务：0:自动，1:喵Api(需Token)，2:Enka-API，3:MiniGG-Api，4:Hutao-Enka代理。三位数按 国服/B服/外服 顺序设置，例如 112 代表国服喵Api、B服喵Api、外服Enka。也可用命令【#喵喵设置面板服务112】'
   },
   srProfileServer: {
-    component: 'Select',
-    bottomHelpMessage: '星铁面板服务选择：0:自动，1:喵Api(需具备Token)，2:Mihomo，3:Avocado(鳄梨)，4:EnkaHSR。如需分服务器设置（国服/B服/外服，如114），请使用【#喵喵设置星铁面板服务114】命令',
-    componentProps: {
-      options: [
-        { label: '0 - 自动', value: '0' },
-        { label: '1 - 喵Api (需具备Token)', value: '1' },
-        { label: '2 - Mihomo', value: '2' },
-        { label: '3 - Avocado (鳄梨)', value: '3' },
-        { label: '4 - EnkaHSR', value: '4' }
-      ]
-    }
+    component: 'Input',
+    componentProps: { placeholder: '0-4，或分服务器三位数字，例如 114' },
+    bottomHelpMessage: '星铁面板服务：0:自动，1:喵Api(需Token)，2:Mihomo，3:Avocado(鳄梨)，4:EnkaHSR。三位数按 国服/B服/外服 顺序设置，例如 114。也可用命令【#喵喵设置星铁面板服务114】'
   },
   teamCalc: {
     bottomHelpMessage: '伤害计算包含组队Buff。目前为测试阶段，数据可能不准确，请慎重开启。数据为固定Buff而非真实面板数据，最终计算数值可能有偏差'
@@ -103,10 +102,10 @@ const componentOverrides = {
   }
 }
 
-/** 以 cfgKey 为键的 schema 映射 */
-function buildCfgSchemaMap () {
-  let map = {}
-  lodash.forEach(cfgSchema, (group) => {
+/** 以 cfgKey 为键的 schema 映射（cfgKey 为扁平配置键） */
+function buildCfgSchemaMap (groups) {
+  const map = {}
+  lodash.forEach(groups, (group) => {
     lodash.forEach(group.cfg, (item, cfgKey) => {
       map[cfgKey] = item
     })
@@ -114,20 +113,24 @@ function buildCfgSchemaMap () {
   return map
 }
 
-const cfgSchemaMap = buildCfgSchemaMap()
-
-/** 由 cfgSchema 自动生成 Guoba 表单 schema */
-function buildSchemas () {
-  let schemas = []
-  lodash.forEach(cfgSchema, (group) => {
+/** 由 schema 自动生成 Guoba 表单 schema */
+function buildSchemas (groups) {
+  const schemas = []
+  let cfg = {}
+  try {
+    cfg = Cfg.getCfg() || {}
+  } catch (e) {
+    cfg = {}
+  }
+  lodash.forEach(groups, (group) => {
     schemas.push({
       component: 'SOFT_GROUP_BEGIN',
       label: group.title
     })
     lodash.forEach(group.cfg, (item, cfgKey) => {
-      let field = {
+      const field = {
         field: cfgKey,
-        label: item.title || item.key
+        label: item.title || item.key || cfgKey
       }
       if (item.desc) {
         field.bottomHelpMessage = item.desc
@@ -142,9 +145,17 @@ function buildSchemas () {
         field.component = 'Switch'
         field.componentProps = {}
       }
-      let override = componentOverrides[cfgKey]
+      const override = componentOverrides[cfgKey]
       if (override) {
         lodash.merge(field, override)
+      }
+      // 已有自定义值不在 Select 选项内时补一项，避免显示空白 / 保存被重置
+      if (field.component === 'Select' && Array.isArray(field.componentProps?.options)) {
+        const cur = cfg[cfgKey]
+        const has = field.componentProps.options.some((o) => String(o.value) === String(cur))
+        if (cur !== undefined && cur !== null && cur !== '' && !has) {
+          field.componentProps.options = field.componentProps.options.concat([{ label: `当前值 ${cur}`, value: cur }])
+        }
       }
       if (item.miao && Version.isMiao) {
         field.componentProps.disabled = true
@@ -156,7 +167,25 @@ function buildSchemas () {
   return schemas
 }
 
+/** 把前端值按 schema 规整为要落盘的值 */
+function normalizeValue (item, val) {
+  if (item.input) {
+    return item.input(val)
+  }
+  if (item.type === 'num') {
+    const n = Number(val)
+    return Number.isFinite(n) ? n : item.def
+  }
+  if (item.type === 'str') {
+    return (lodash.isNil(val) || val === '') ? String(item.def) : String(val)
+  }
+  return !!val
+}
+
 export function supportGuoba () {
+  const groups = getSchemaGroups()
+  const cfgSchemaMap = buildCfgSchemaMap(groups)
+
   return {
     pluginInfo: {
       name: 'miao-plugin',
@@ -166,17 +195,23 @@ export function supportGuoba () {
       link: 'https://github.com/yoimiya-kokomi/miao-plugin',
       isV3: true,
       isV2: false,
+      showInMenu: 'auto',
       description: '喵喵插件：提供角色面板、角色查询、练度统计、抽卡分析、角色百科、帮助配置等功能',
       icon: 'mdi:cat',
       iconColor: '#e9b16d',
       iconPath: path.join(__dirname, 'resources/common/icon.png')
     },
     configInfo: {
-      schemas: buildSchemas(),
+      schemas: buildSchemas(groups),
       // 获取配置数据（用于前端填充显示数据）
-      async getConfigData () {
-        let cfg = Cfg.getCfg() || {}
-        let ret = {}
+      getConfigData () {
+        let cfg = {}
+        try {
+          cfg = Cfg.getCfg() || {}
+        } catch (e) {
+          cfg = {}
+        }
+        const ret = {}
         lodash.forEach(cfgSchemaMap, (item, cfgKey) => {
           let val = cfg[cfgKey]
           if (lodash.isUndefined(val)) {
@@ -190,11 +225,11 @@ export function supportGuoba () {
         return ret
       },
       // 设置配置（前端点确定后调用）：校验后经 Cfg.set 写入，实时生效
-      async setConfigData (data, { Result }) {
+      setConfigData (data, { Result }) {
         let count = 0
         let skipped = 0
         lodash.forEach(data || {}, (val, cfgKey) => {
-          let item = cfgSchemaMap[cfgKey]
+          const item = cfgSchemaMap[cfgKey]
           if (!item) {
             return
           }
@@ -203,17 +238,7 @@ export function supportGuoba () {
             skipped++
             return
           }
-          let ret
-          if (item.input) {
-            ret = item.input(val)
-          } else if (item.type === 'num') {
-            ret = val * 1 || item.def
-          } else if (item.type === 'str') {
-            ret = (lodash.isNil(val) || val === '') ? String(item.def) : String(val)
-          } else {
-            ret = !!val
-          }
-          Cfg.set(cfgKey, ret)
+          Cfg.set(cfgKey, normalizeValue(item, val))
           count++
         })
         return Result.ok({}, `保存成功，配置已实时生效（更新${count}项${skipped ? `，${skipped}项在喵喵系核心下始终开启` : ''}）`)
