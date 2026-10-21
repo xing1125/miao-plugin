@@ -230,19 +230,45 @@ const buildRolecombat = async (id, listEntry) => {
     const nHard = Object.keys(v.hard_room || {}).length
     return { no: k, summary: `${nRoom} 幕${nHard ? ` + ${nHard} 圣牌` : ''}` }
   })
-  // 难度5（幻想难度）：Boss 幕 + 圣牌挑战；monster_level 为配置值，显示 = 值+1（BWIKI 逐幕实证）
-  const stages = []
+  // 难度5（幻想难度）全 12 关：第1~10幕 + 圣牌挑战×2
+  // 普通幕无 title（敌人随机组合，数据仅等级）→ 紧凑 pill；Boss 幕/圣牌挑战 → 完整卡
+  // monster_level 为配置值，显示 = 值+1（BWIKI 逐幕实证）
+  const blocks = []
+  let pills = []
+  const flushPills = () => {
+    if (pills.length) {
+      blocks.push({ type: 'pills', acts: pills })
+      pills = []
+    }
+  }
   const d5 = dc['5'] || dc[Object.keys(dc).pop()]
   for (const no of Object.keys(d5.room).sort((a, b) => a - b)) {
     const r = d5.room[no]
-    if (!r.title) continue
+    if (!r.title) {
+      pills.push({ no, level: r.monster_level + 1 })
+      continue
+    }
+    flushPills()
     const previews = (r.monster_preview_list || []).map(m => ({ name: m.name, icon: resolveIcon(m.icon) }))
     if (!previews.length) previews.push({ name: r.title, icon: '' })
-    stages.push({ no, level: r.monster_level + 1, title: r.title, hard: false, previews, desc: cleanDesc(r.desc) })
+    blocks.push({ type: 'stage', st: { no, label: `第 ${no} 幕`, level: r.monster_level + 1, title: r.title, hard: false, previews, desc: cleanDesc(r.desc) } })
   }
+  flushPills()
+  let hardIdx = 0
   for (const no of Object.keys(d5.hard_room || {}).sort((a, b) => a - b)) {
     const r = d5.hard_room[no]
-    stages.push({ no, level: r.monster_level + 1, title: r.title, hard: true, previews: (r.monster_preview_list || []).map(m => ({ name: m.name, icon: resolveIcon(m.icon) })), desc: cleanDesc(r.desc) })
+    blocks.push({
+      type: 'stage',
+      st: {
+        no,
+        label: `圣牌挑战 ${++hardIdx}`, // 数据按幕位 4/7 键控，但实为独立挑战，与普通幕数字区分
+        level: r.monster_level + 1,
+        title: r.title,
+        hard: true,
+        previews: (r.monster_preview_list || []).map(m => ({ name: m.name, icon: resolveIcon(m.icon) })),
+        desc: cleanDesc(r.desc)
+      }
+    })
   }
   const buffDescs = [...new Set((raw.avatar_config.buff_avatar_list || []).map(b => cleanDesc(b.desc)[0]).filter(Boolean))]
   const info = {
@@ -255,7 +281,7 @@ const buildRolecombat = async (id, listEntry) => {
     teyaoAvatars: (raw.avatar_config.invite_avatar_list || []).map(x => avatarChip(x)),
     buffDescs,
     diffs,
-    stages
+    blocks
   }
   return { template: 'stat/rolecombat-info', renderData: { info } }
 }

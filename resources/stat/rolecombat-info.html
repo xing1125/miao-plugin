@@ -70,16 +70,24 @@
     {{/each}}
   </div>
 
-  <div class="rc-stages-title">幻想难度 · 演出关卡</div>
+  <div class="rc-stages-title">幻想难度 · 全 12 关</div>
 
-  {{each info.stages st}}
+  {{each info.blocks blk}}
+  {{if blk.type === 'pills'}}
+  <div class="rc-acts">
+    <span class="rc-acts-label">普通幕</span>
+    {{each blk.acts act}}
+    <span class="rc-act-pill">第 {{act.no}} 幕 · Lv.{{act.level}}</span>
+    {{/each}}
+  </div>
+  {{else}}
+  {{set st = blk.st}}
   <div class="hi-chall">
     <div class="hi-chall-head">
-      <span class="hi-no">第 {{st.no}} 幕</span>
-      {{if st.hard}}<span class="hi-tag rc-hard">圣牌挑战</span>{{/if}}
+      <span class="hi-no">{{st.label}}</span>
+      {{if st.hard}}<span class="hi-tag rc-hard">独立挑战</span>{{/if}}
       <span class="rc-lv">敌人等级 Lv.{{st.level}}</span>
     </div>
-    {{set monster = st}}
     <div class="hi-monster">
       <div class="m-body">
         <div class="m-name">{{st.title}}</div>
@@ -99,6 +107,7 @@
       {{/each}}
     </ul>
   </div>
+  {{/if}}
   {{/each}}
 
   <div class="hi-note">
