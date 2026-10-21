@@ -297,7 +297,8 @@ const query = async (e, mode, useNext) => {
     if (!entry) return e.reply(useNext ? '暂未查到下一期数据，请稍后再试~' : '暂未找到进行中的期次~')
     const built = await BUILDERS[mode](entry.id, entry)
     if (useNext) await e.reply('下期预告 · 测试服数据，正式以游戏内为准')
-    return await e.reply([await Common.render(built.template, built.renderData, { e, scale: 1 })])
+    // 注意：runtime.render 默认 retType 会自行 e.reply 发送图片并返回 true，勿再包一层 e.reply
+    return await Common.render(built.template, built.renderData, { e, scale: 1 })
   } catch (err) {
     console.error('endgame-info 查询失败:', err && err.message)
     return e.reply('信息卡数据获取失败，请稍后再试（数据源：nanoka.cc）')
