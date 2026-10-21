@@ -1,0 +1,84 @@
+{{extend defaultLayout}}
+
+{{block 'css'}}
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/common.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/hard-info.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/tower-info.css?v=1.0"/>
+{{/block}}
+
+{{block 'main'}}
+<div class="hard-info-wrap">
+
+  <div class="hi-head">
+    <div class="hi-title">
+      <strong>深境螺旋信息</strong>
+      {{if info.scheduleId}}<span class="hi-diff">期号 {{info.scheduleId}}</span>{{/if}}
+    </div>
+    <div class="hi-sched">
+      <span class="hi-sched-name">{{info.name}}</span>
+      <span class="hi-sched-time">{{info.start}} 〇 {{info.end}}</span>
+    </div>
+  </div>
+
+  <div class="hi-panel">
+    <div class="hi-panel-title">渊月祝福</div>
+    <div class="tw-blessing">
+      {{if blessing.icon}}<div class="b-icon" style="background-image:url({{blessing.icon}})"></div>{{/if}}
+      <div class="b-body">
+        <div class="b-name">{{blessing.name}}</div>
+        <div class="b-desc">{{@blessing.desc}}</div>
+      </div>
+    </div>
+  </div>
+
+  {{each info.floors floor}}
+  <div class="tw-floor">
+    <div class="tw-floor-head">
+      <span class="tw-floor-no">第 {{floor.no}} 层</span>
+      {{each floor.buffs buff}}
+      <span class="tw-floor-buff">{{buff}}</span>
+      {{/each}}
+      {{if floor.empty}}<span class="tw-test">· 敌方阵容待测试服数据补充</span>{{/if}}
+    </div>
+
+    {{if floor.empty}}
+    <div class="tw-empty">该层敌方阵容暂未公开，开放后本卡自动更新。</div>
+    {{else}}
+    {{each floor.rooms room}}
+    <div class="tw-room">
+      <div class="tw-room-no">第 {{room.no}} 间 · 敌人等级 Lv.{{room.level}}</div>
+      <div class="tw-side">
+        <div class="side-label">上半</div>
+        <div class="monster-row">
+          {{each room.first m}}
+          <div class="tw-monster">
+            {{if m.icon}}<div class="mo-icon" style="background-image:url({{m.icon}})"></div>{{else}}<div class="mo-ph"></div>{{/if}}
+            <div><div class="mo-name">{{m.name}}</div><div class="mo-lv">Lv.{{m.level}}</div></div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      <div class="tw-side">
+        <div class="side-label">下半</div>
+        <div class="monster-row">
+          {{each room.second m}}
+          <div class="tw-monster">
+            {{if m.icon}}<div class="mo-icon" style="background-image:url({{m.icon}})"></div>{{else}}<div class="mo-ph"></div>{{/if}}
+            <div><div class="mo-name">{{m.name}}</div><div class="mo-lv">Lv.{{m.level}}</div></div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+    {{/each}}
+    {{/if}}
+  </div>
+  {{/each}}
+
+  <div class="hi-note">
+    数据来源：Nanoka（static.nanoka.cc）· 含测试服未上线期次，正式开放时间以游戏内为准。
+    <b>#深渊</b> 查询个人战绩
+  </div>
+
+</div>
+{{/block}}

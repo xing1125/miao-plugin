@@ -1,0 +1,110 @@
+{{extend defaultLayout}}
+
+{{block 'css'}}
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/common.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/hard-info.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/rolecombat-info.css?v=1.0"/>
+{{/block}}
+
+{{block 'main'}}
+<div class="hard-info-wrap">
+
+  <div class="hi-head">
+    <div class="hi-title">
+      <strong>幻想真境剧诗</strong>
+      {{if info.scheduleId}}<span class="hi-diff">第 {{info.scheduleId}} 期</span>{{/if}}
+    </div>
+    <div class="hi-sched">
+      <span class="hi-sched-time">{{info.start}} 〇 {{info.end}}</span>
+    </div>
+  </div>
+
+  <div class="hi-panel">
+    <div class="hi-panel-title">本期演出阵容</div>
+
+    <div class="rc-row">
+      <div class="rc-label">限定元素</div>
+      <div class="rc-elems">
+        {{each info.elems el}}
+        <span class="rc-elem elem-{{el.key}}">{{el.name}}</span>
+        {{/each}}
+      </div>
+    </div>
+
+    <div class="rc-row">
+      <div class="rc-label">开幕角色</div>
+      <div class="rc-avatars">
+        {{each info.kaimuAvatars av}}
+        <div class="rc-avatar">
+          <div class="av-face" style="background-image:url({{av.face}})"><i class="av-dot elem-{{av.elem}}"></i></div>
+          <div class="av-name">{{av.name}}</div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+
+    <div class="rc-row">
+      <div class="rc-label">特邀角色</div>
+      <div class="rc-avatars">
+        {{each info.teyaoAvatars av}}
+        <div class="rc-avatar">
+          <div class="av-face" style="background-image:url({{av.face}})"><i class="av-dot elem-{{av.elem}}"></i></div>
+          <div class="av-name">{{av.name}}</div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+
+    {{if info.buffDescs.length}}
+    <ul class="rc-buffs">
+      {{each info.buffDescs line}}
+      <li><b>幻境祝福</b> · {{@line}}</li>
+      {{/each}}
+    </ul>
+    {{/if}}
+  </div>
+
+  <div class="rc-diffstrip">
+    {{each info.diffs df}}
+    <div class="rc-diff">难度{{df.no}}<span>{{df.summary}}</span></div>
+    {{/each}}
+  </div>
+
+  <div class="rc-stages-title">幻想难度 · 演出关卡</div>
+
+  {{each info.stages st}}
+  <div class="hi-chall">
+    <div class="hi-chall-head">
+      <span class="hi-no">第 {{st.no}} 幕</span>
+      {{if st.hard}}<span class="hi-tag rc-hard">圣牌挑战</span>{{/if}}
+      <span class="rc-lv">敌人等级 Lv.{{st.level}}</span>
+    </div>
+    {{set monster = st}}
+    <div class="hi-monster">
+      <div class="m-body">
+        <div class="m-name">{{st.title}}</div>
+      </div>
+      <div class="rc-previews">
+        {{each st.previews m}}
+        <div class="rc-preview">
+          {{if m.icon}}<div class="p-icon" style="background-image:url({{m.icon}})"></div>{{else}}<div class="p-ph">?</div>{{/if}}
+          <div class="p-name">{{m.name}}</div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    <ul class="hi-mech">
+      {{each st.desc seg}}
+      <li>{{@seg}}</li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/each}}
+
+  <div class="hi-note">
+    数据来源：Nanoka（static.nanoka.cc）· 测试服数据，正式开放以游戏内为准。
+    <b>#幻想真境剧诗</b> 查询个人战绩
+  </div>
+
+</div>
+{{/block}}

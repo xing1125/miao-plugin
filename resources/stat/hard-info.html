@@ -1,0 +1,68 @@
+{{extend defaultLayout}}
+
+{{block 'css'}}
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/common.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/hard-info.css?v=1.0"/>
+{{/block}}
+
+{{block 'main'}}
+<div class="hard-info-wrap">
+
+  <div class="hi-head">
+    <div class="hi-title">
+      <strong>幽境危战信息</strong>
+      {{if info.difficulty}}<span class="hi-diff">{{info.difficultyName}} · </span><span class="hi-lv">Lv.{{info.level}}</span>{{/if}}
+    </div>
+    <div class="hi-sched">
+      <span class="hi-sched-name">{{info.name}}</span>
+      {{if info.scheduleId}}<span class="hi-sched-id">期号 {{info.scheduleId}}</span>{{/if}}
+      <span class="hi-sched-time">{{info.start}} 〇 {{info.end}}</span>
+    </div>
+  </div>
+
+  {{if info.desc && info.desc.length}}
+  <div class="hi-panel">
+    <div class="hi-panel-title">挑战成果</div>
+    <ul class="hi-effects">
+      {{each info.desc line}}
+      <li>{{@line}}</li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/if}}
+
+  {{each info.challs chall}}
+  <div class="hi-chall">
+    <div class="hi-chall-head">
+      <span class="hi-no">{{chall.name}}</span>
+      {{each chall.tags tag}}
+      <span class="hi-tag">{{tag}}</span>
+      {{/each}}
+    </div>
+    {{set monster = chall.monster}}
+    <div class="hi-monster">
+      {{if monster.icon}}
+      <div class="m-icon" style="background-image:url({{monster.icon}})"></div>
+      {{else}}
+      <div class="m-icon-ph elem-{{chall.elem}}">{{chall.elemName}}</div>
+      {{/if}}
+      <div class="m-body">
+        <div class="m-name">{{monster.name}}</div>
+        {{if monster.shield}}<div class="m-shield">{{monster.shield}}</div>{{/if}}
+      </div>
+    </div>
+    <ul class="hi-mech">
+      {{each monster.desc seg}}
+      <li>{{@seg}}</li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/each}}
+
+  <div class="hi-note">
+    数据来源：Nanoka（static.nanoka.cc）· 含测试服未上线期次，正式开放时间以游戏内为准。
+    <b>#幽境危战</b> 查询个人战绩 · 期号 <b>{{info.scheduleId}}</b>
+  </div>
+
+</div>
+{{/block}}

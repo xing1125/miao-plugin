@@ -1,0 +1,211 @@
+/* 幽境危战 · 期次信息卡（hard-info） */
+
+.hard-info-wrap {
+  padding: 5px 10px 10px;
+}
+
+/* ---------- 头部期次条 ---------- */
+.hi-head {
+  background: linear-gradient(135deg, rgba(38, 32, 22, 0.92), rgba(20, 20, 26, 0.92));
+  border: 1px solid rgba(211, 188, 142, 0.35);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+}
+.hi-head .hi-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.hi-head .hi-title strong {
+  font-family: Number, "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 34px;
+  font-weight: normal;
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+}
+.hi-head .hi-title .hi-diff {
+  font-size: 22px;
+  color: #d3bc8e;
+  margin-left: 12px;
+}
+.hi-head .hi-title .hi-lv {
+  font-size: 22px;
+  color: #fff;
+  margin-left: 8px;
+  font-style: italic;
+}
+.hi-head .hi-sched {
+  margin-top: 6px;
+  font-size: 16px;
+  color: #d3bc8e;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.hi-head .hi-sched .hi-sched-name {
+  font-size: 19px;
+  color: #ffe6b8;
+  margin-right: 10px;
+}
+.hi-head .hi-sched .hi-sched-id {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-right: 12px;
+}
+.hi-head .hi-sched .hi-sched-time {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- 通用面板 ---------- */
+.hi-panel {
+  background: linear-gradient(180deg, rgba(30, 28, 24, 0.88), rgba(18, 18, 22, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+.hi-panel-title {
+  font-size: 20px;
+  color: #d3bc8e;
+  font-family: Number, "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  letter-spacing: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(211, 188, 142, 0.25);
+  margin-bottom: 10px;
+}
+
+/* ---------- 挑战成果 ---------- */
+.hi-effects li {
+  list-style: none;
+  font-size: 16px;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.88);
+  padding: 2px 0 2px 16px;
+  position: relative;
+}
+.hi-effects li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 13px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d3bc8e;
+}
+
+/* ---------- 场次卡 ---------- */
+.hi-chall {
+  background: linear-gradient(180deg, rgba(30, 28, 24, 0.88), rgba(18, 18, 22, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+.hi-chall-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(211, 188, 142, 0.25);
+  margin-bottom: 10px;
+}
+.hi-chall-head .hi-no {
+  font-size: 21px;
+  color: #d3bc8e;
+  font-family: Number, "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  letter-spacing: 2px;
+  margin-right: 14px;
+}
+.hi-chall-head .hi-tag {
+  font-size: 14px;
+  color: #ffe6b8;
+  background: rgba(211, 188, 142, 0.18);
+  border: 1px solid rgba(211, 188, 142, 0.4);
+  border-radius: 20px;
+  padding: 1px 12px;
+  margin-right: 8px;
+}
+
+/* 怪物条 */
+.hi-monster {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+.hi-monster .m-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  margin-right: 14px;
+}
+.hi-monster .m-icon-ph {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  margin-right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-family: Number, "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+.hi-monster .elem-cryo { background: linear-gradient(135deg, #4d7fa8, #1f3d55); }
+.hi-monster .elem-anemo { background: linear-gradient(135deg, #4da89b, #1f554d); }
+.hi-monster .elem-pyro { background: linear-gradient(135deg, #a86e4d, #552f1f); }
+.hi-monster .m-body {
+  flex: 1;
+  min-width: 0;
+}
+.hi-monster .m-name {
+  font-size: 20px;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+.hi-monster .m-shield {
+  margin-top: 3px;
+  font-size: 14px;
+  color: #ffd479;
+}
+
+/* 机制描述 */
+.hi-mech li {
+  list-style: none;
+  font-size: 15.5px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.86);
+  padding: 4px 0;
+}
+.hi-mech li + li {
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+.hi-mech b {
+  color: #d3bc8e;
+  font-weight: 600;
+}
+
+/* ---------- 底注 ---------- */
+.hi-note {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.6;
+  padding: 2px 6px 0;
+}
+.hi-note b {
+  color: rgba(211, 188, 142, 0.8);
+  font-weight: normal;
+}
