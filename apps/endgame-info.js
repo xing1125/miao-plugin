@@ -1,6 +1,6 @@
 // 幽境危战 / 深境螺旋 / 幻想真境剧诗 · 期次信息卡查询
 // 数据源：nanoka 公开静态 JSON（测试服 datamine 成品），怪物图标优先 Lotus 本地图库
-// 指令：#幽境危战信息 | #幽境危战预告 | #深渊信息 | #深渊预告 | #剧诗信息 | #剧诗预告
+// 指令：#幽境危战信息 | #幽境危战预告 | #深渊信息 | #深渊预告 | #剧诗信息 | #剧诗预告（"信息预告"连写亦兼容）
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -313,17 +313,17 @@ let app = App.init({
 
 app.reg({
   hardInfo: {
-    rule: /^#?幽境危战(信息|预告)$/,
+    rule: /^#?幽境危战(?:信息预告|信息|预告)$/,
     fn: async function (e) { return query(e, 'leyline', e.msg.includes('预告')) },
     desc: '【#幽境危战信息/预告】'
   },
   towerInfo: {
-    rule: /^#?(深境螺旋|深渊)(信息|预告)$/,
+    rule: /^#?(?:深境螺旋|深渊)(?:信息预告|信息|预告)$/,
     fn: async function (e) { return query(e, 'tower', e.msg.includes('预告')) },
     desc: '【#深渊信息/预告】'
   },
   rolecombatInfo: {
-    rule: /^#?(幻想真境剧诗|剧诗)(信息|预告)$/,
+    rule: /^#?(?:幻想真境剧诗|剧诗)(?:信息预告|信息|预告)$/,
     fn: async function (e) { return query(e, 'rolecombat', e.msg.includes('预告')) },
     desc: '【#剧诗信息/预告】'
   }
