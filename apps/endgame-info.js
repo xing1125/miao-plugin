@@ -3,6 +3,7 @@
 // 指令：#幽境危战信息 | #幽境危战预告 | #深渊信息 | #深渊预告 | #剧诗信息 | #剧诗预告（"信息预告"连写亦兼容）
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import { createRequire } from 'node:module'
 import { App, Common } from '#miao'
 import { miaoPath } from '#miao.path'
@@ -13,6 +14,8 @@ const logger = global.logger || console
 const BASE = 'https://static.nanoka.cc'
 const ICON_DIR = path.resolve(miaoPath, '../../Lotus-Plugin/nanoka-atlas-backend/gallery/gi')
 const CHAR_DIR = miaoPath + '/resources/meta-gs/character'
+// 远程图标落盘缓存（渲染用 file:// 加载，避免远程图片未加载完就截图的竞态）
+const ICON_CACHE_DIR = path.join(os.tmpdir(), 'endgame-icon-cache')
 
 // nanoka rolecombat 元素 id → 元素（其前端 ze[id-1]：2火 3水 4草 5雷 6冰 7风 8岩；0/1 过滤）
 const RC_ELEM = { 2: ['pyro', '火'], 3: ['hydro', '水'], 4: ['dendro', '草'], 5: ['electro', '雷'], 6: ['cryo', '冰'], 7: ['anemo', '风'], 8: ['geo', '岩'] }
@@ -106,24 +109,46 @@ const resolveIcon = (name) => resolveIconLocal(name) || (name ? `${BASE}/assets/
 // 远程 404 探测缓存：确认缺失的图标直接回退模板占位块，避免渲染出空图块
 const _iconMiss = new Map()
 const ICON_MISS_TTL = 24 * 3600 * 1000
+
+const fileUrl = (p) => 'file:///' + String(p).replace(/\\/g, '/')
+
+// 下载远程图标到本地缓存并返回 file:// URL；失败返回 ''（模板回退占位块）
+const downloadIcon = async (name) => {
+  const file = path.join(ICON_CACHE_DIR, name + '.webp')
+  if (fs.existsSync(file) && fs.statSync(file).size > 0) return fileUrl(file)
+  const opts = { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }, signal: AbortSignal.timeout(20000) }
+  let resp
+  try {
+    resp = await fetch(`${BASE}/assets/gi/${name}.webp`, opts)
+  } catch (err) {
+    const dispatcher = getProxyDispatcher()
+    if (!dispatcher) throw err
+    resp = await fetch(`${BASE}/assets/gi/${name}.webp`, { ...opts, dispatcher })
+  }
+  if (!resp.ok) return ''
+  const buf = Buffer.from(await resp.arrayBuffer())
+  fs.mkdirSync(ICON_CACHE_DIR, { recursive: true })
+  const tmp = file + '.tmp'
+  fs.writeFileSync(tmp, buf)
+  fs.renameSync(tmp, file)
+  return fileUrl(file)
+}
+
 const resolveIconOk = async (name) => {
   const local = resolveIconLocal(name)
   if (local) return local
   if (!name) return ''
   const hit = _iconMiss.get(name)
   if (hit && Date.now() - hit < ICON_MISS_TTL) return ''
-  const url = `${BASE}/assets/gi/${name}.webp`
   try {
-    const r = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
-    if (!r.ok) {
-      _iconMiss.set(name, Date.now())
-      logger.mark(`[endgame-info] 图标缺失，使用占位：${name} (HTTP ${r.status})`)
-      return ''
-    }
+    const url = await downloadIcon(name)
+    if (url) return url
   } catch (err) {
-    return url // 探测请求本身异常：宁可信其有，交给渲染端展示
+    logger.warn(`[endgame-info] 图标下载失败，使用占位：${name} (${err.message})`)
   }
-  return url
+  _iconMiss.set(name, Date.now())
+  logger.mark(`[endgame-info] 图标缺失，使用占位：${name}`)
+  return ''
 }
 
 const cleanTag = (t) => (t || '')
