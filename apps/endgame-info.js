@@ -91,13 +91,39 @@ const pick = (list) => {
 }
 
 // ------------------------------------------------------------------ 图标与文本
-const resolveIcon = (name) => {
+// 本地（Lotus 图库）优先；无本地时返回远程候选 URL（不保证存在）
+const resolveIconLocal = (name) => {
   if (!name) return ''
   for (const ext of ['.webp', '.png']) {
     const f = path.join(ICON_DIR, name + ext)
     if (fs.existsSync(f) && fs.statSync(f).size > 0) return `file:///${ICON_DIR.replace(/\\/g, '/')}/${name}${ext}`
   }
-  return `${BASE}/assets/gi/${name}.webp`
+  return ''
+}
+
+const resolveIcon = (name) => resolveIconLocal(name) || (name ? `${BASE}/assets/gi/${name}.webp` : '')
+
+// 远程 404 探测缓存：确认缺失的图标直接回退模板占位块，避免渲染出空图块
+const _iconMiss = new Map()
+const ICON_MISS_TTL = 24 * 3600 * 1000
+const resolveIconOk = async (name) => {
+  const local = resolveIconLocal(name)
+  if (local) return local
+  if (!name) return ''
+  const hit = _iconMiss.get(name)
+  if (hit && Date.now() - hit < ICON_MISS_TTL) return ''
+  const url = `${BASE}/assets/gi/${name}.webp`
+  try {
+    const r = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
+    if (!r.ok) {
+      _iconMiss.set(name, Date.now())
+      logger.mark(`[endgame-info] 图标缺失，使用占位：${name} (HTTP ${r.status})`)
+      return ''
+    }
+  } catch (err) {
+    return url // 探测请求本身异常：宁可信其有，交给渲染端展示
+  }
+  return url
 }
 
 const cleanTag = (t) => (t || '')
@@ -162,21 +188,21 @@ const buildHard = async (id, listEntry) => {
         // nanoka 的 monster_level 是配置值，游戏内显示 = 配置值+1（官方百科逐档实证）
         level: diff.monster_level + 1,
         desc: diff.difficulty_config.desc_list || [],
-        challs: Object.entries(diff.level_config).map(([ck, c], i) => ({
+        challs: await Promise.all(Object.entries(diff.level_config).map(async ([ck, c], i) => ({
           name: `第 ${i + 1} 场`,
           elem: ELEM_FALLBACK[i],
           elemName: ELEM_NAME[i],
           tags: (c.recommend_list || []).map(cleanTag).filter(Boolean),
           monster: {
             name: c.name,
-            icon: resolveIcon(c.icon),
+            icon: await resolveIconOk(c.icon),
             shield: (c.monster_buff_name_list || []).join(' · '),
             desc: (c.monster_buff_detail_list && c.monster_buff_detail_list.length
               ? c.monster_buff_detail_list
               : c.monster_buff_desc_list || []
             ).map((d, j) => `<b>「${(c.monster_buff_name_list || [])[j] || ''}」</b>${d}`)
           }
-        }))
+        })))
       }
     }
   }
@@ -197,20 +223,20 @@ const buildTower = async (id, listEntry) => {
     name: raw.leyline.name,
     start: t.start,
     end: t.end,
-    floors: Object.keys(raw.floor).sort((a, b) => a - b).map((fk) => {
+    floors: await Promise.all(Object.keys(raw.floor).sort((a, b) => a - b).map(async (fk) => {
       const f = raw.floor[fk]
-      const rooms = Object.keys(f.room).sort((a, b) => a - b).map((rk) => {
+      const rooms = await Promise.all(Object.keys(f.room).sort((a, b) => a - b).map(async (rk) => {
         const r = f.room[rk]
         return {
           no: rk,
           level: r.level,
-          first: (r.first || []).map(m => ({ name: m.name, level: m.level !== undefined ? m.level : r.level, icon: resolveIcon(m.icon) })),
-          second: (r.second || []).map(m => ({ name: m.name, level: m.level !== undefined ? m.level : r.level, icon: resolveIcon(m.icon) }))
+          first: await Promise.all((r.first || []).map(async m => ({ name: m.name, level: m.level !== undefined ? m.level : r.level, icon: await resolveIconOk(m.icon) }))),
+          second: await Promise.all((r.second || []).map(async m => ({ name: m.name, level: m.level !== undefined ? m.level : r.level, icon: await resolveIconOk(m.icon) })))
         }
-      })
+      }))
       const empty = rooms.every(r => !r.first.length && !r.second.length)
       return { no: fk, buffs: (f.buff || []).map(b => b.replace('(test)', '测试：')), rooms, empty }
-    })
+    }))
   }
   return {
     template: 'stat/tower-info',
@@ -219,7 +245,7 @@ const buildTower = async (id, listEntry) => {
       blessing: {
         name: raw.leyline.name,
         desc: raw.leyline.desc,
-        icon: resolveIcon(listEntry && listEntry.icon)
+        icon: await resolveIconOk(listEntry && listEntry.icon)
       }
     }
   }
@@ -254,7 +280,7 @@ const buildRolecombat = async (id, listEntry) => {
       continue
     }
     flushPills()
-    const previews = (r.monster_preview_list || []).map(m => ({ name: m.name, icon: resolveIcon(m.icon) }))
+    const previews = await Promise.all((r.monster_preview_list || []).map(async m => ({ name: m.name, icon: await resolveIconOk(m.icon) })))
     if (!previews.length) previews.push({ name: r.title, icon: '' })
     blocks.push({ type: 'stage', st: { no, label: `第 ${no} 幕`, level: r.monster_level + 1, title: r.title, hard: false, previews, desc: cleanDesc(r.desc) } })
   }
@@ -270,7 +296,7 @@ const buildRolecombat = async (id, listEntry) => {
         level: r.monster_level + 1,
         title: r.title,
         hard: true,
-        previews: (r.monster_preview_list || []).map(m => ({ name: m.name, icon: resolveIcon(m.icon) })),
+        previews: await Promise.all((r.monster_preview_list || []).map(async m => ({ name: m.name, icon: await resolveIconOk(m.icon) }))),
         desc: cleanDesc(r.desc)
       }
     })
@@ -311,7 +337,7 @@ const statusOf = (listEntry) => {
 const BUILDERS = { leyline: buildHard, tower: buildTower, rolecombat: buildRolecombat }
 
 // 导出内部实现：供离线预览/自检脚本直接复用真实组装路径（.workbuddy/wave-render/render_endgame.mjs）
-export { pick, statusOf, getList, getDetail, buildHard, buildTower, buildRolecombat, query, BUILDERS }
+export { pick, statusOf, getList, getDetail, buildHard, buildTower, buildRolecombat, query, BUILDERS, resolveIcon, resolveIconOk }
 
 // ------------------------------------------------------------------ 指令处理
 const query = async (e, mode, useNext) => {
