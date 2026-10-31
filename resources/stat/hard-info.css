@@ -36,6 +36,37 @@
   margin-left: 8px;
   font-style: italic;
 }
+/* 期次状态徽标：进行中（金）/ 下期预告（青） */
+.hi-head .hi-title .hi-badge {
+  font-size: 14px;
+  font-style: normal;
+  border-radius: 20px;
+  padding: 1px 12px;
+  margin-left: 10px;
+  align-self: center;
+  letter-spacing: 1px;
+}
+.hi-head .hi-title .hi-badge.live {
+  color: #ffe6b8;
+  background: rgba(211, 188, 142, 0.18);
+  border: 1px solid rgba(211, 188, 142, 0.5);
+  text-shadow: 0 0 4px rgba(211, 188, 142, 0.5);
+}
+.hi-head .hi-title .hi-badge.next {
+  color: #a8e6e0;
+  background: rgba(120, 200, 195, 0.14);
+  border: 1px solid rgba(120, 200, 195, 0.45);
+}
+/* 档期标注（测试服档期/正式档期） */
+.hi-head .hi-sched .hi-time-label {
+  font-style: normal;
+  font-size: 13px;
+  color: #a8e6e0;
+  border: 1px solid rgba(120, 200, 195, 0.4);
+  border-radius: 4px;
+  padding: 0 6px;
+  margin-right: 8px;
+}
 .hi-head .hi-sched {
   margin-top: 6px;
   font-size: 16px;

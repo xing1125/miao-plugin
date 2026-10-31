@@ -152,6 +152,7 @@ const buildHard = async (id, listEntry) => {
     template: 'stat/hard-info',
     renderData: {
       info: {
+        ...statusOf(listEntry),
         scheduleId: String(raw.id),
         name: raw.name,
         start: (listEntry && listEntry.live_begin) || raw.begin_time,
@@ -184,10 +185,14 @@ const buildHard = async (id, listEntry) => {
 // 深境螺旋（tower-info 模板）
 const buildTower = async (id, listEntry) => {
   const raw = await getDetail('tower', id)
+  const useOfficialFallback = !(listEntry && listEntry.live_begin) && !!TOWER_TIME_FALLBACK[id]
   const t = (listEntry && listEntry.live_begin)
     ? { start: listEntry.live_begin, end: listEntry.live_end }
     : (TOWER_TIME_FALLBACK[id] || { start: raw.open, end: raw.close })
   const info = {
+    ...statusOf(listEntry),
+    // 官方兜底时间可信 → 档期标签从「测试服档期」改为「正式档期」
+    timeLabel: useOfficialFallback ? '正式档期' : undefined,
     scheduleId: id,
     name: raw.leyline.name,
     start: t.start,
@@ -272,6 +277,7 @@ const buildRolecombat = async (id, listEntry) => {
   }
   const buffDescs = [...new Set((raw.avatar_config.buff_avatar_list || []).map(b => cleanDesc(b.desc)[0]).filter(Boolean))]
   const info = {
+    ...statusOf(listEntry),
     scheduleId: id,
     start: (listEntry && listEntry.live_begin) || raw.begin_time,
     end: (listEntry && listEntry.live_end) || raw.end_time,
@@ -286,7 +292,26 @@ const buildRolecombat = async (id, listEntry) => {
   return { template: 'stat/rolecombat-info', renderData: { info } }
 }
 
+// ------------------------------------------------------------------ 期次状态与档期标注
+// status: live=进行中 / next=下期预告；beta=true 表示仅有测试服档期（live_begin 缺失）
+// beta 期 raw 里的 begin/end 是测试服时间（常已过期），直接展示会误导 → 打「测试服档期」标签
+const statusOf = (listEntry) => {
+  const now = Date.now()
+  const ts = (s) => (s ? new Date(String(s).replace(' ', 'T')).getTime() : null)
+  const begin = ts(listEntry && listEntry.live_begin)
+  const end = ts(listEntry && listEntry.live_end)
+  const live = begin && begin <= now && (!end || now < end)
+  return {
+    status: live ? 'live' : 'next',
+    beta: !begin,
+    timeLabel: !begin ? '测试服档期' : (!live ? '正式档期' : '')
+  }
+}
+
 const BUILDERS = { leyline: buildHard, tower: buildTower, rolecombat: buildRolecombat }
+
+// 导出内部实现：供离线预览/自检脚本直接复用真实组装路径（.workbuddy/wave-render/render_endgame.mjs）
+export { pick, statusOf, getList, getDetail, buildHard, buildTower, buildRolecombat, query, BUILDERS }
 
 // ------------------------------------------------------------------ 指令处理
 const query = async (e, mode, useNext) => {

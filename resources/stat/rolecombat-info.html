@@ -2,8 +2,8 @@
 
 {{block 'css'}}
 <link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/common.css?v=1.0"/>
-<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/hard-info.css?v=1.0"/>
-<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/rolecombat-info.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/hard-info.css?v=1.1"/>
+<link rel="stylesheet" type="text/css" href="{{_res_path}}/stat/rolecombat-info.css?v=1.1"/>
 {{/block}}
 
 {{block 'main'}}
@@ -12,10 +12,11 @@
   <div class="hi-head">
     <div class="hi-title">
       <strong>幻想真境剧诗</strong>
+      {{if info.status}}<span class="hi-badge {{info.status}}">{{info.status === 'live' ? '进行中' : '下期预告'}}</span>{{/if}}
       {{if info.scheduleId}}<span class="hi-diff">第 {{info.scheduleId}} 期</span>{{/if}}
     </div>
     <div class="hi-sched">
-      <span class="hi-sched-time">{{info.start}} 〇 {{info.end}}</span>
+      <span class="hi-sched-time">{{if info.timeLabel}}<em class="hi-time-label">{{info.timeLabel}}</em>{{/if}}{{info.start}} 〇 {{info.end}}</span>
     </div>
   </div>
 
